@@ -18,7 +18,9 @@ jobs:
           python-version: '3.12'
       - name: Read collection summary from Google Sheets
         run: python scripts/refresh.py
-      - name: Match reusable product images\n        run: python scripts/images.py\n      - name: Commit updated snapshot
+      - name: Match reusable product images
+        run: python scripts/images.py
+      - name: Commit updated snapshot
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
