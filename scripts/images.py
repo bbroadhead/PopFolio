@@ -64,6 +64,30 @@ def commons(item):
             return {"image":url,"imageSource":info.get("descriptionurl"),"imageLicense":license_name,"imageProvider":"Wikimedia Commons"}
     return None
 
+
+def openverse(item):
+    """Find an explicitly licensed photo using the Openverse image API."""
+    number = str(item.get("number") or "").strip()
+    if not number.isdigit():
+        return None
+    params = urllib.parse.urlencode({"q":"Funko Pop "+str(item["name"])+" "+number,"page_size":10})
+    req = urllib.request.Request("https://api.openverse.org/v1/images/?"+params,headers={"User-Agent":"PopFolioCollectionDashboard/1.1"})
+    with urllib.request.urlopen(req,timeout=12) as response:
+        hits = json.load(response).get("results",[])
+    needed = set(tokens(item["name"]))
+    critical = set(tokens(item.get("variant",""))) & {"chase","flocked","diamond","metallic","glow","gitd","blacklight","pearlescent"}
+    for hit in hits:
+        title = set(tokens(hit.get("title","")))
+        if not {"funko","pop"}.issubset(title) or number not in title or not needed.issubset(title) or not critical.issubset(title):
+            continue
+        license_name = str(hit.get("license") or "").lower()
+        if license_name not in ("cc0","pdm","by","by-sa"):
+            continue
+        url = hit.get("thumbnail") or hit.get("url")
+        if url and url.startswith("https://"):
+            return {"image":url,"imageSource":hit.get("foreign_landing_url"),"imageLicense":license_name,"imageProvider":"Openverse","imageCreator":hit.get("creator")}
+    return None
+
 def main():
     path=ROOT/"pops.json"
     if not path.exists():
@@ -81,7 +105,7 @@ def main():
             found+=1
             continue
         try:
-            result=commons(item)
+            result=commons(item) or openverse(item)
             if result:
                 item.update(result)
                 found+=1
