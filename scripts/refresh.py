@@ -99,9 +99,11 @@ def main():
                   gain=round(sum(x["gain"] for x in groups), 2))
     totals["roi"] = round(totals["gain"] / totals["cost"] * 100, 2) if totals["cost"] else 0
     output = dict(updatedAt=datetime.now(timezone.utc).isoformat(), source="Google Sheets Dashboard", groups=groups, totals=totals)
+    items = fetch_items()
     pathlib.Path("data").mkdir(exist_ok=True)
     pathlib.Path("data/portfolio.json").write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    items = fetch_items()\n    pathlib.Path("data/pops.json").write_text(json.dumps({"updatedAt": output["updatedAt"], "items": items}, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")\n    print("Refreshed", len(groups), "franchises and", len(items), "individual Pops")
+    pathlib.Path("data/pops.json").write_text(json.dumps({"updatedAt": output["updatedAt"], "items": items}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print("Refreshed", len(groups), "franchises and", len(items), "individual Pops")
 
 if __name__ == "__main__":
     main()
