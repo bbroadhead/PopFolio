@@ -88,6 +88,70 @@ def openverse(item):
             return {"image":url,"imageSource":hit.get("foreign_landing_url"),"imageLicense":license_name,"imageProvider":"Openverse","imageCreator":hit.get("creator")}
     return None
 
+
+CATALOG_URL = "https://raw.githubusercontent.com/kennymkchan/funko-pop-data/master/funko_pop.json"
+
+def catalog_images(items):
+    """Match an open-source catalog's product-image links without guessing URLs.
+
+    Product photos themselves are third-party assets and remain hosted by their
+    original providers; catalog source licensing does not transfer photo rights.
+    """
+    try:
+        req = urllib.request.Request(CATALOG_URL, headers={"User-Agent":"PopFolio/1.2"})
+        with urllib.request.urlopen(req, timeout=90) as response:
+            catalog = json.load(response)
+    except Exception as exc:
+        print("Catalog download unavailable:", exc)
+        return {}
+    if isinstance(catalog, dict):
+        catalog = catalog.get("data") or catalog.get("products") or catalog.get("items") or []
+    if not isinstance(catalog, list):
+        print("Unexpected catalog format")
+        return {}
+    indexed = {}
+    for entry in catalog:
+        if not isinstance(entry, dict):
+            continue
+        title = str(entry.get("title") or "")
+        url = str(entry.get("image") or "")
+        if not title or not url.startswith("https://"):
+            continue
+        for token in set(tokens(title)):
+            if len(token) >= 3:
+                indexed.setdefault(token, []).append(entry)
+    results = {}
+    for item in items:
+        name_tokens = set(tokens(item.get("name","")))
+        if not name_tokens:
+            continue
+        rare = min((t for t in name_tokens if len(t)>=3), key=lambda t:len(indexed.get(t,[])), default=None)
+        if not rare:
+            continue
+        candidates = []
+        for entry in indexed.get(rare,[]):
+            title = str(entry.get("title") or "")
+            title_tokens = set(tokens(title))
+            if not name_tokens.issubset(title_tokens):
+                continue
+            number = str(item.get("number") or "").strip()
+            if number.isdigit() and number not in title_tokens:
+                continue
+            variant = str(item.get("variant") or "").lower()
+            critical = ("chase","flocked","diamond","metallic","blacklight","pearlescent")
+            if any(x in variant and x not in title.lower() for x in critical):
+                continue
+            # Require a high-confidence unique title rather than a fuzzy guess.
+            extra = len(title_tokens - name_tokens - set(tokens(number)) - {"pop","funko","vinyl","figure","games","television","movies"})
+            candidates.append((extra,entry))
+        candidates.sort(key=lambda pair:pair[0])
+        if not candidates or (len(candidates)>1 and candidates[0][0]==candidates[1][0]):
+            continue
+        entry=candidates[0][1]
+        results[identity(item)]={"image":entry["image"],"imageSource":CATALOG_URL,"imageProvider":"Community Funko catalog","imageLicense":"Third-party product image; rights retained by owner"}
+    print("Community catalog:",len(catalog),"entries,",len(results),"candidate images")
+    return results
+
 def main():
     path=ROOT/"pops.json"
     if not path.exists():
