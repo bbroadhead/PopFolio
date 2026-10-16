@@ -8,11 +8,17 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: popfolio-data-refresh
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -27,5 +33,16 @@ jobs:
           git add data/portfolio.json data/pops.json data/image-report.json
           if ! git diff --cached --quiet; then
             git commit -m "Refresh collection data"
-            git push
+            for attempt in 1 2 3 4 5; do
+              git fetch origin main
+              git rebase origin/main
+              if git push origin HEAD:main; then
+                echo "Collection snapshot published successfully."
+                exit 0
+              fi
+              echo "Push conflict; retrying ($attempt/5)..."
+              sleep $((attempt * 3))
+            done
+            echo "Unable to publish after five retries."
+            exit 1
           fi
