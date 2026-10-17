@@ -3,5 +3,5 @@
   "exportDownloaded": false,
   "imagesExtracted": 0,
   "imagesAssigned": 0,
-  "error": "IncompleteRead(4878934 bytes read)"
+  "error": "Export exceeds 100 MB safety limit"
 }
