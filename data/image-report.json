@@ -1,8 +1,16 @@
 {
-  "total": 551,
+  "total": 574,
   "matched": 0,
-  "unmatched": 551,
+  "unmatched": 574,
   "sources": {},
   "catalogCandidates": 0,
+  "catalogDiagnostics": {
+    "downloaded": true,
+    "entries": 23940,
+    "withImage": 0,
+    "candidates": 0,
+    "accepted": 0,
+    "ambiguous": 0
+  },
   "note": "Catalog dates to 2021; newer releases may not be included."
-}\n
+}

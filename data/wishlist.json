@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-17T03:21:18.332Z",
+  "updatedAt": "2026-10-17T03:49:18.604743+00:00",
   "items": [
     {
       "name": "50s Wanda",
@@ -24,7 +24,7 @@
     {
       "name": "Shadow with Emeralds (flocked)",
       "number": "1300",
-      "marketValue": 22
+      "marketValue": 22.0
     },
     {
       "name": "Chaos",
@@ -49,7 +49,7 @@
     {
       "name": "Daedric Warrior",
       "number": "59",
-      "marketValue": 21
+      "marketValue": 21.0
     },
     {
       "name": "Alduin",
@@ -99,7 +99,7 @@
     {
       "name": "Avengers Assemble: Thor",
       "number": "587",
-      "marketValue": 10
+      "marketValue": 10.0
     },
     {
       "name": "Avengers Assemble: Hawkeye",
@@ -109,7 +109,7 @@
     {
       "name": "Superior Iron Man #1568 — Limited Edition 5,000 Pieces",
       "number": "1568",
-      "marketValue": 35
+      "marketValue": 35.0
     }
   ]
 }

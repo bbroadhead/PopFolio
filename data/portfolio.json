@@ -1,14 +1,14 @@
 {
-  "updatedAt": "2026-10-17T01:37:37.579024+00:00",
+  "updatedAt": "2026-10-17T03:49:18.604743+00:00",
   "source": "Google Sheets Dashboard",
   "groups": [
     {
       "name": "Back to the Future",
-      "count": 24,
-      "itemCost": 460.84,
-      "cost": 604.52,
-      "value": 725.09,
-      "gain": 120.57,
+      "count": 25,
+      "itemCost": 482.34,
+      "cost": 626.87,
+      "value": 760.04,
+      "gain": 133.17,
       "sold": 0.0
     },
     {
@@ -22,11 +22,11 @@
     },
     {
       "name": "DC Comics",
-      "count": 8,
-      "itemCost": 49.38,
-      "cost": 77.63,
-      "value": 134.63,
-      "gain": 57.0,
+      "count": 10,
+      "itemCost": 64.38,
+      "cost": 99.3,
+      "value": 154.42,
+      "gain": 55.12,
       "sold": 0.0
     },
     {
@@ -49,11 +49,11 @@
     },
     {
       "name": "Disney",
-      "count": 12,
-      "itemCost": 187.98,
-      "cost": 244.88,
-      "value": 379.71,
-      "gain": 134.83,
+      "count": 14,
+      "itemCost": 206.98,
+      "cost": 270.34,
+      "value": 436.38,
+      "gain": 166.04,
       "sold": 0.0
     },
     {
@@ -112,20 +112,20 @@
     },
     {
       "name": "Game of Thrones",
-      "count": 32,
-      "itemCost": 323.23,
-      "cost": 423.63,
-      "value": 527.15,
-      "gain": 103.52,
+      "count": 34,
+      "itemCost": 341.23,
+      "cost": 442.89,
+      "value": 552.43,
+      "gain": 109.54,
       "sold": 0.0
     },
     {
       "name": "Halloween",
-      "count": 8,
-      "itemCost": 76.52,
-      "cost": 146.18,
-      "value": 179.32,
-      "gain": 33.14,
+      "count": 9,
+      "itemCost": 84.52,
+      "cost": 154.74,
+      "value": 202.32,
+      "gain": 47.58,
       "sold": 0.0
     },
     {
@@ -139,20 +139,20 @@
     },
     {
       "name": "Horror: Miscellaneous",
-      "count": 17,
-      "itemCost": 237.09,
-      "cost": 309.92,
-      "value": 405.22,
-      "gain": 95.3,
+      "count": 22,
+      "itemCost": 297.09,
+      "cost": 375.22,
+      "value": 479.99,
+      "gain": 104.77,
       "sold": 0.0
     },
     {
       "name": "House of the Dragon",
-      "count": 9,
-      "itemCost": 147.87,
-      "cost": 176.64,
-      "value": 156.16,
-      "gain": -20.48,
+      "count": 10,
+      "itemCost": 155.87,
+      "cost": 185.2,
+      "value": 166.16,
+      "gain": -19.04,
       "sold": 0.0
     },
     {
@@ -220,20 +220,20 @@
     },
     {
       "name": "Lord of the Rings, The",
-      "count": 4,
-      "itemCost": 51.99,
-      "cost": 63.35,
-      "value": 83.48,
-      "gain": 20.13,
+      "count": 5,
+      "itemCost": 73.99,
+      "cost": 86.9,
+      "value": 125.98,
+      "gain": 39.08,
       "sold": 0.0
     },
     {
       "name": "Mandalorian, The",
-      "count": 6,
-      "itemCost": 40.95,
-      "cost": 82.06,
-      "value": 106.77,
-      "gain": 24.71,
+      "count": 7,
+      "itemCost": 55.95,
+      "cost": 98.11,
+      "value": 123.72,
+      "gain": 25.61,
       "sold": 0.0
     },
     {
@@ -247,11 +247,11 @@
     },
     {
       "name": "Miscellaneous",
-      "count": 29,
-      "itemCost": 349.53,
-      "cost": 517.93,
-      "value": 430.34,
-      "gain": -87.59,
+      "count": 35,
+      "itemCost": 405.53,
+      "cost": 585.39,
+      "value": 620.6,
+      "gain": 35.21,
       "sold": 0.0
     },
     {
@@ -328,11 +328,11 @@
     },
     {
       "name": "Stranger Things",
-      "count": 59,
-      "itemCost": 476.84,
-      "cost": 642.07,
-      "value": 1163.5,
-      "gain": 521.43,
+      "count": 60,
+      "itemCost": 479.84,
+      "cost": 645.28,
+      "value": 1171.7,
+      "gain": 526.42,
       "sold": 0.0
     },
     {
@@ -391,10 +391,10 @@
     }
   ],
   "totals": {
-    "count": 551,
-    "cost": 9468.44,
-    "value": 11912.55,
-    "gain": 2444.11,
-    "roi": 25.81
+    "count": 574,
+    "cost": 9749.87,
+    "value": 12414.92,
+    "gain": 2665.05,
+    "roi": 27.33
   }
 }
