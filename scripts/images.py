@@ -155,33 +155,41 @@ def catalog_images(items):
 def main():
     path=ROOT/"pops.json"
     if not path.exists():
-        print("No synced Pop feed; skipping image enrichment.")
-        return
+        raise FileNotFoundError("Individual Pop snapshot missing")
     data=json.loads(path.read_text(encoding="utf-8"))
     approved=approved_images()
+    # The previous version defined catalog_images() but never called it.
+    catalog=catalog_images(data.get("items",[]))
     found=0
+    sources={}
     missing=0
     for item in data.get("items",[]):
         key=identity(item)
         record=approved.get(key)
         if record and isinstance(record,dict) and str(record.get("url","")).startswith("https://"):
-            item.update(image=record["url"],imageSource=record.get("source",""),imageLicense=record.get("license","Owner-approved"),imageProvider=record.get("provider","Curated"))
+            item.update(image=record["url"],imageSource=record.get("source",""),
+                imageLicense=record.get("license","Owner-approved"),
+                imageProvider=record.get("provider","Curated"))
+        elif key in catalog:
+            item.update(catalog[key])
+        else:
+            # Do not perform 1,102 network searches every refresh: those
+            # previously took almost an hour and still returned zero images.
+            item["image"]=None
+        if item.get("image"):
             found+=1
-            continue
-        try:
-            result=commons(item) or openverse(item)
-            if result:
-                item.update(result)
-                found+=1
-            else:
-                missing+=1
-        except Exception as exc:
-            print("Lookup unavailable for",item.get("name"),str(exc))
+            provider=item.get("imageProvider","Unknown")
+            sources[provider]=sources.get(provider,0)+1
+        else:
             missing+=1
-        time.sleep(0.12)
-    path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
-    (ROOT/"image-report.json").write_text(json.dumps({"total":len(data.get("items",[])),"matched":found,"unmatched":missing},indent=2)+"\n",encoding="utf-8")
-    print("Product images:",found,"matched;",missing,"unmatched")
+    path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+    report={"total":len(data.get("items",[])),"matched":found,"unmatched":missing,
+        "sources":sources,"catalogCandidates":len(catalog),
+        "note":"Catalog dates to 2021; newer releases may not be included."}
+    (ROOT/"image-report.json").write_text(json.dumps(report,indent=2)+"\\n",encoding="utf-8")
+    print("Product images:",found,"matched;",missing,"unmatched; by provider:",sources)
+    if not catalog and not approved:
+        print("WARNING: No catalog or approved images available; check catalog download and schema.")
 
 if __name__=="__main__":
     main()
