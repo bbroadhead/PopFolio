@@ -10,7 +10,23 @@
     "withImage": 0,
     "candidates": 0,
     "accepted": 0,
-    "ambiguous": 0
+    "ambiguous": 0,
+    "imageSamples": [],
+    "invalidImageSamples": [
+      {
+        "title": "Black Panther",
+        "image": "None"
+      },
+      {
+        "title": "Prison Mike",
+        "image": "None"
+      },
+      {
+        "title": "Pam Beesly",
+        "image": "None"
+      }
+    ],
+    "legacyHttp": 0
   },
   "note": "Catalog dates to 2021; newer releases may not be included."
 }
