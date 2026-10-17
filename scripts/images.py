@@ -182,11 +182,11 @@ def main():
             sources[provider]=sources.get(provider,0)+1
         else:
             missing+=1
-    path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+    path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     report={"total":len(data.get("items",[])),"matched":found,"unmatched":missing,
         "sources":sources,"catalogCandidates":len(catalog),
         "note":"Catalog dates to 2021; newer releases may not be included."}
-    (ROOT/"image-report.json").write_text(json.dumps(report,indent=2)+"\\n",encoding="utf-8")
+    (ROOT/"image-report.json").write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
     print("Product images:",found,"matched;",missing,"unmatched; by provider:",sources)
     if not catalog and not approved:
         print("WARNING: No catalog or approved images available; check catalog download and schema.")
