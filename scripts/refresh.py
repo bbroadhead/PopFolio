@@ -66,6 +66,20 @@ def fetch_items():
                     image=None))
         except Exception as exc:
             errors.append(f"{tab}: {exc}")
+    # Repair blank Pop numbers only when an exact franchise/name/variant match
+    # has one unambiguous number elsewhere in the same imported collection.
+    # Never guess between different variants or conflicting Pop numbers.
+    known = {}
+    for item in items:
+        if item["number"]:
+            key = (item["franchise"].casefold(), item["name"].casefold(), item["variant"].casefold())
+            known.setdefault(key, set()).add(item["number"])
+    for item in items:
+        if not item["number"]:
+            key = (item["franchise"].casefold(), item["name"].casefold(), item["variant"].casefold())
+            candidates = known.get(key, set())
+            if len(candidates) == 1:
+                item["number"] = next(iter(candidates))
     if errors:
         raise ValueError("Item import incomplete; retaining prior item snapshot. " + "; ".join(errors))
     if len(items) < 100:
