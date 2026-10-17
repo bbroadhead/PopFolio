@@ -91,6 +91,26 @@ def openverse(item):
 
 CATALOG_URL = "https://raw.githubusercontent.com/kennymkchan/funko-pop-data/master/funko_pop.json"
 
+def normalize_catalog_image(value):
+    """Accept common legacy URL formats while keeping HTTPS-only browser output."""
+    if isinstance(value,dict):
+        value=value.get("src") or value.get("url") or value.get("original") or ""
+    if isinstance(value,list):
+        value=value[0] if value else ""
+    if not isinstance(value,str):
+        return None
+    value=value.strip()
+    if value.startswith("//"):
+        value="https:"+value
+    elif value.startswith("http://"):
+        value="https://"+value[7:]
+    if not value.startswith("https://"):
+        return None
+    parsed=urllib.parse.urlsplit(value)
+    if not parsed.hostname or parsed.username or parsed.password:
+        return None
+    return value
+
 def catalog_images(items):
     """Match the catalog by normalized character names, Pop number, and series.
 
@@ -100,7 +120,7 @@ def catalog_images(items):
     """
     from difflib import SequenceMatcher
     diagnostics={"downloaded":False,"entries":0,"withImage":0,
-                 "candidates":0,"accepted":0,"ambiguous":0}
+                 "candidates":0,"accepted":0,"ambiguous":0,"imageSamples":[],"invalidImageSamples":[],"legacyHttp":0}
     try:
         req=urllib.request.Request(CATALOG_URL,headers={"User-Agent":"PopFolio/2.0"})
         with urllib.request.urlopen(req,timeout=90) as response:
@@ -123,9 +143,19 @@ def catalog_images(items):
     valid=[]
     for entry in catalog:
         if not isinstance(entry,dict):continue
-        url=str(entry.get("image") or "")
+        raw=entry.get("image")
         title=str(entry.get("title") or "")
-        if not title or not url.startswith("https://"):continue
+        if not title:continue
+        if raw and len(diagnostics["imageSamples"])<3:
+            diagnostics["imageSamples"].append(str(raw)[:180])
+        if isinstance(raw,str) and raw.startswith("http://"):
+            diagnostics["legacyHttp"]+=1
+        url=normalize_catalog_image(raw)
+        if not url:
+            if len(diagnostics["invalidImageSamples"])<3:
+                diagnostics["invalidImageSamples"].append({"title":title[:80],"image":str(raw)[:120]})
+            continue
+        entry=dict(entry,image=url)
         diagnostics["withImage"]+=1
         title_tokens=norm(title)
         record=(entry,title_tokens)
