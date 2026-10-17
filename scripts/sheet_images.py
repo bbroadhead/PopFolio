@@ -5,6 +5,7 @@ Google Sheets, credentials, or manual exports are required. If the spreadsheet
 export is not publicly accessible, keep the previously published images.
 """
 import io,json,os,pathlib,re,urllib.request,zipfile,xml.etree.ElementTree as ET
+import http.client,time,tempfile,shutil
 from urllib.parse import quote
 from refresh import SHEET_ID
 
@@ -70,11 +71,30 @@ def main():
     report_path=ROOT/"sheet-image-report.json"
     try:
         url=f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=xlsx"
-        req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0 (compatible; PopFolio/1.0)"})
-        with urllib.request.urlopen(req,timeout=120) as response:
-            content=response.read(100*1024*1024+1)
-        if len(content)>100*1024*1024:raise ValueError("Export exceeds 100 MB safety limit")
-        with zipfile.ZipFile(io.BytesIO(content)) as z:
+        last_error=None
+        export_file=None
+        for attempt in range(1,5):
+            try:
+                req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0 (compatible; PopFolio/1.0)","Accept-Encoding":"identity"})
+                with tempfile.TemporaryFile() as tmp:
+                    with urllib.request.urlopen(req,timeout=180) as response:
+                        while True:
+                            chunk=response.read(256*1024)
+                            if not chunk:break
+                            tmp.write(chunk)
+                            if tmp.tell()>100*1024*1024:raise ValueError("Export exceeds 100 MB safety limit")
+                    tmp.seek(0)
+                    with zipfile.ZipFile(tmp) as check:
+                        if check.testzip() is not None:raise zipfile.BadZipFile("Export contains corrupt entries")
+                    tmp.seek(0)
+                    export_file=io.BytesIO(tmp.read())
+                break
+            except (http.client.IncompleteRead,TimeoutError,ConnectionError,OSError,zipfile.BadZipFile) as exc:
+                last_error=exc
+                print(f"Spreadsheet export attempt {attempt}/4 interrupted: {type(exc).__name__}: {exc}")
+                if attempt<4:time.sleep(attempt*4)
+        if export_file is None:raise RuntimeError(f"Spreadsheet export incomplete after four attempts: {last_error}")
+        with zipfile.ZipFile(export_file) as z:
             report["exportDownloaded"]=True
             sheets=sheet_paths(z)
             report["sheetsInExport"]=len(sheets)
