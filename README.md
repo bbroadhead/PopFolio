@@ -41,3 +41,17 @@ The dashboard includes a separate `features.js` module and `features.css` styles
 The GitHub workflow reads Dashboard, all franchise tabs, and Wishlist. It writes `data/portfolio.json`, `data/pops.json`, and `data/wishlist.json`; it does not edit Google Sheets. The website's existing Sync button is a browser-only sync and does not persist to GitHub. After a successful GitHub Actions refresh, reload the site to receive the latest snapshot.
 
 The image gallery displays approved image URLs when available; missing images use placeholders. Images are not guaranteed to be present for all Pops. No market history or full official-release catalog is inferred from the spreadsheet.
+
+## New collection views (October 2026)
+
+- **Gallery:** Searchable, paginated visual grid with retailer, value-range and sort filters. Images show when the image feed supplies an approved URL.
+- **Pop details:** Click a card for a modal showing variant, retailer, purchase date, costs, market value, gain, ROI and duplicate count.
+- **Insights:** Biggest winners and losses, missing values, duplicate groups and image coverage. Returns are unrealized estimates.
+- **Retailers:** Counts, total all-in spending, known market value and valuation coverage by retailer.
+- **Wishlist & completion:** Reads the separate Wishlist tab; exact name-and-number matches are marked owned. True franchise-completion percentages require a separate release checklist and are not fabricated.
+- **PWA:** Installable using browser Add to Home Screen / Install app. Offline shell is cached; current data requires network access.
+
+The original spreadsheet is read-only. Manual browser sync updates the current session; scheduled GitHub Actions publishes the durable snapshots. The original franchise dashboard and individual Pop search remain intact.
+
+### Verification
+Static validation confirms that app.js and sw.js parse as JavaScript, the PWA manifest and collection/wishlist snapshots are valid JSON, and 551 collection entries and 22 wishlist entries are available. Browser interactions and GitHub Pages deployment still require live smoke testing.
