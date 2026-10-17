@@ -52,7 +52,7 @@ def anchor_images(z,tab,path):
     return result
 def main():
     items_path=ROOT/"pops.json"
-    data=json.loads(items_path.read_text(encoding="utf-8"))
+    data=json.loads(items_path.read_text(encoding="utf-8"))\n    # Retain already published image URLs if the sheet export becomes unavailable.\n    prior_images={}\n    try:\n        prior=json.loads((ROOT/"previous-pops.json").read_text(encoding="utf-8"))\n        prior_images={p["id"]:p for p in prior.get("items",[]) if p.get("image")}\n    except (OSError,ValueError,KeyError):pass\n    for item in data["items"]:\n        if not item.get("image") and item["id"] in prior_images:\n            old=prior_images[item["id"]]\n            for field in ("image","imageProvider","imageSource"):\n                if field in old:item[field]=old[field]
     report={"status":"pending","exportDownloaded":False,"imagesExtracted":0,"imagesAssigned":0}
     report_path=ROOT/"sheet-image-report.json"
     try:
