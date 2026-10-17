@@ -113,7 +113,7 @@ def main():
         wishlist.append({"name":row[2].strip(),"number":row[3].strip(),
                          "marketValue":nullable_num(row[4])})
     pathlib.Path("data/wishlist.json").write_text(json.dumps(
-        {"updatedAt":output["updatedAt"],"items":wishlist},ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+        {"updatedAt":output["updatedAt"],"items":wishlist},ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     print("Refreshed", len(groups), "franchises,", len(items), "individual Pops and", len(wishlist), "wishlist entries")
 
 if __name__ == "__main__":
