@@ -216,39 +216,62 @@ def main():
     if not path.exists():
         raise FileNotFoundError("Individual Pop snapshot missing")
     data=json.loads(path.read_text(encoding="utf-8"))
+    items=data.get("items",[])
     approved=approved_images()
-    # The previous version defined catalog_images() but never called it.
-    catalog,diagnostics=catalog_images(data.get("items",[]))
+    cache_path=ROOT/"image-cache.json"
+    cache=json.loads(cache_path.read_text(encoding="utf-8")) if cache_path.exists() else {}
+    if not isinstance(cache,dict):cache={}
+    catalog,diagnostics=catalog_images(items)
+    # The historical catalog currently reports 23,940 entries but zero
+    # nonempty image fields. Use Commons/Openverse as independent fallbacks.
+    import os
+    budget=max(0,min(40,int(os.getenv("IMAGE_LOOKUP_LIMIT","12"))))
+    attempts=0
+    lookup_errors=[]
     found=0
     sources={}
     missing=0
-    for item in data.get("items",[]):
+    for item in items:
         key=identity(item)
         record=approved.get(key)
-        if record and isinstance(record,dict) and str(record.get("url","")).startswith("https://"):
-            item.update(image=record["url"],imageSource=record.get("source",""),
+        if isinstance(record,dict) and normalize_catalog_image(record.get("url")):
+            item.update(image=normalize_catalog_image(record["url"]),
+                imageSource=record.get("source",""),
                 imageLicense=record.get("license","Owner-approved"),
                 imageProvider=record.get("provider","Curated"))
         elif key in catalog:
             item.update(catalog[key])
+        elif isinstance(cache.get(key),dict) and cache[key].get("image"):
+            item.update(cache[key])
         else:
-            # Do not perform 1,102 network searches every refresh: those
-            # previously took almost an hour and still returned zero images.
             item["image"]=None
+            # Do not repeatedly search a figure that already had no matches.
+            if key not in cache and attempts<budget:
+                attempts+=1
+                result=None
+                for provider in (commons,openverse):
+                    try:
+                        result=provider(item)
+                        if result:break
+                    except Exception as exc:
+                        if len(lookup_errors)<8:
+                            lookup_errors.append(provider.__name__+": "+str(exc)[:150])
+                cache[key]=result or {"searched":True}
+                if result:item.update(result)
         if item.get("image"):
             found+=1
             provider=item.get("imageProvider","Unknown")
             sources[provider]=sources.get(provider,0)+1
-        else:
-            missing+=1
+        else:missing+=1
     path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
-    report={"total":len(data.get("items",[])),"matched":found,"unmatched":missing,
-        "sources":sources,"catalogCandidates":diagnostics["candidates"],"catalogDiagnostics":diagnostics,
-        "note":"Catalog dates to 2021; newer releases may not be included."}
+    cache_path.write_text(json.dumps(cache,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+    report={"total":len(items),"matched":found,"unmatched":missing,
+        "sources":sources,"catalogCandidates":diagnostics["candidates"],
+        "catalogDiagnostics":diagnostics,"fallbackSearchesThisRun":attempts,
+        "fallbackSearchesCached":len(cache),"fallbackErrors":lookup_errors,
+        "note":"The historical catalog currently contains no image URLs. Fallback searches are rate-limited and may not find many collectible images."}
     (ROOT/"image-report.json").write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
-    print("Product images:",found,"matched;",missing,"unmatched; by provider:",sources)
-    if not catalog and not approved:
-        print("WARNING: Zero images matched. Inspect catalogDiagnostics in image-report.json.")
+    print("Image enrichment:",json.dumps(report,ensure_ascii=False))
 
 if __name__=="__main__":
     main()
