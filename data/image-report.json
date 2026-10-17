@@ -28,5 +28,8 @@
     ],
     "legacyHttp": 0
   },
-  "note": "Catalog dates to 2021; newer releases may not be included."
+  "fallbackSearchesThisRun": 12,
+  "fallbackSearchesCached": 12,
+  "fallbackErrors": [],
+  "note": "The historical catalog currently contains no image URLs. Fallback searches are rate-limited and may not find many collectible images."
 }
