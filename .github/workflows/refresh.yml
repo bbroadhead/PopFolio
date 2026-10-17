@@ -22,14 +22,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Preserve previously published image mappings\n        run: cp data/pops.json data/previous-pops.json\n      - name: Read collection summary from Google Sheets
+      - name: Preserve previously published image mappings
+        run: cp data/pops.json data/previous-pops.json\n      - name: Read collection summary from Google Sheets
         run: python scripts/refresh.py
       - name: Match reusable product images
         run: python scripts/images.py
-      - name: Extract embedded images from Google Sheets (read-only)\n        run: python scripts/sheet_images.py\n      - name: Commit updated snapshot
+      - name: Extract embedded images from Google Sheets (read-only)
+        run: python scripts/sheet_images.py\n      - name: Commit updated snapshot
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p images/sheet
           git add data/portfolio.json data/pops.json data/wishlist.json data/image-report.json data/image-cache.json data/sheet-image-report.json images/sheet/
           if ! git diff --cached --quiet; then
             git commit -m "Refresh collection data"
