@@ -24,3 +24,20 @@ Spreadsheet images are not used. Each Pop has a targeted external product-photo 
 
 ## Manual sync button
 The page offers **Sync now** to request the publicly readable Dashboard CSV directly from Google. It updates the current browser session only, and may be blocked by browser CORS restrictions. It does not run the GitHub Actions workflow or refresh the item-level feed. The scheduled GitHub workflow remains the durable refresh mechanism.
+
+## Collection Explorer (October 2026)
+
+The dashboard includes a separate `features.js` module and `features.css` stylesheet to preserve the existing portfolio and search controls.
+
+- **Gallery:** image-first cards, name/number/franchise search, retailer filtering, sorting by value/cost/ROI/name, and pagination.
+- **Pop details:** click any gallery or insight card to see the original record's purchase date, retailer, variant, item price, all-in cost, market value, ROI, and duplicate count.
+- **Insights:** biggest gains and losses, missing market values, duplicate copies, and image coverage.
+- **Retailer analytics:** counts, total all-in cost, recorded market value, and valuation coverage by purchase retailer.
+- **Wishlist and completion:** read-only Wishlist import and exact name+number matching against owned Pops. This is *wishlist completion*, not completion of an entire official Funko release catalog.
+- **PWA:** manifest, app icon, and a service worker with network-first asset loading. Install using your browser's Add to Home Screen or Install option. Offline availability depends on previously cached content.
+
+### Data updates and verification
+
+The GitHub workflow reads Dashboard, all franchise tabs, and Wishlist. It writes `data/portfolio.json`, `data/pops.json`, and `data/wishlist.json`; it does not edit Google Sheets. The website's existing Sync button is a browser-only sync and does not persist to GitHub. After a successful GitHub Actions refresh, reload the site to receive the latest snapshot.
+
+The image gallery displays approved image URLs when available; missing images use placeholders. Images are not guaranteed to be present for all Pops. No market history or full official-release catalog is inferred from the spreadsheet.
