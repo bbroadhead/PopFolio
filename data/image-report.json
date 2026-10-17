@@ -29,7 +29,9 @@
     "legacyHttp": 0
   },
   "fallbackSearchesThisRun": 12,
-  "fallbackSearchesCached": 36,
-  "fallbackErrors": [],
+  "fallbackSearchesCached": 48,
+  "fallbackErrors": [
+    "commons: HTTP Error 429: Too Many Requests"
+  ],
   "note": "The historical catalog currently contains no image URLs. Fallback searches are rate-limited and may not find many collectible images."
 }
