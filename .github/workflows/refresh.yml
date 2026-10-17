@@ -30,7 +30,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/portfolio.json data/pops.json data/image-report.json
+          git add data/portfolio.json data/pops.json data/wishlist.json data/image-report.json
           if ! git diff --cached --quiet; then
             git commit -m "Refresh collection data"
             for attempt in 1 2 3 4 5; do
