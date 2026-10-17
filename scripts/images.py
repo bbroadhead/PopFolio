@@ -92,65 +92,94 @@ def openverse(item):
 CATALOG_URL = "https://raw.githubusercontent.com/kennymkchan/funko-pop-data/master/funko_pop.json"
 
 def catalog_images(items):
-    """Match an open-source catalog's product-image links without guessing URLs.
+    """Match the catalog by normalized character names, Pop number, and series.
 
-    Product photos themselves are third-party assets and remain hosted by their
-    original providers; catalog source licensing does not transfer photo rights.
+    The upstream catalog has only handle, image, title, and series fields.
+    Its title often does NOT include a Pop number, and some owned records
+    also lack one. Do not make either absence an automatic rejection.
     """
+    from difflib import SequenceMatcher
+    diagnostics={"downloaded":False,"entries":0,"withImage":0,
+                 "candidates":0,"accepted":0,"ambiguous":0}
     try:
-        req = urllib.request.Request(CATALOG_URL, headers={"User-Agent":"PopFolio/1.2"})
-        with urllib.request.urlopen(req, timeout=90) as response:
-            catalog = json.load(response)
+        req=urllib.request.Request(CATALOG_URL,headers={"User-Agent":"PopFolio/2.0"})
+        with urllib.request.urlopen(req,timeout=90) as response:
+            catalog=json.load(response)
+        diagnostics["downloaded"]=True
     except Exception as exc:
-        print("Catalog download unavailable:", exc)
-        return {}
-    if isinstance(catalog, dict):
-        catalog = catalog.get("data") or catalog.get("products") or catalog.get("items") or []
-    if not isinstance(catalog, list):
-        print("Unexpected catalog format")
-        return {}
-    indexed = {}
+        diagnostics["error"]=str(exc)
+        print("CATALOG DOWNLOAD FAILED:",exc)
+        return {},diagnostics
+    if isinstance(catalog,dict):
+        catalog=catalog.get("data") or catalog.get("products") or catalog.get("items") or []
+    if not isinstance(catalog,list):
+        diagnostics["error"]="Unexpected catalog JSON structure"
+        return {},diagnostics
+    diagnostics["entries"]=len(catalog)
+    stop={"funko","pop","vinyl","figure","figures","the","and","with","of","as","from","exclusive","edition"}
+    def norm(value):
+        return set(tokens(value))-stop
+    indexed={}
+    valid=[]
     for entry in catalog:
-        if not isinstance(entry, dict):
-            continue
-        title = str(entry.get("title") or "")
-        url = str(entry.get("image") or "")
-        if not title or not url.startswith("https://"):
-            continue
-        for token in set(tokens(title)):
-            if len(token) >= 3:
-                indexed.setdefault(token, []).append(entry)
-    results = {}
+        if not isinstance(entry,dict):continue
+        url=str(entry.get("image") or "")
+        title=str(entry.get("title") or "")
+        if not title or not url.startswith("https://"):continue
+        diagnostics["withImage"]+=1
+        title_tokens=norm(title)
+        record=(entry,title_tokens)
+        valid.append(record)
+        for t in title_tokens:
+            if len(t)>2:indexed.setdefault(t,[]).append(record)
+    results={}
     for item in items:
-        name_tokens = set(tokens(item.get("name","")))
-        if not name_tokens:
-            continue
-        rare = min((t for t in name_tokens if len(t)>=3), key=lambda t:len(indexed.get(t,[])), default=None)
-        if not rare:
-            continue
-        candidates = []
-        for entry in indexed.get(rare,[]):
-            title = str(entry.get("title") or "")
-            title_tokens = set(tokens(title))
-            if not name_tokens.issubset(title_tokens):
+        wanted=norm(item.get("name",""))
+        if not wanted:continue
+        searchable=[t for t in wanted if len(t)>2 and t in indexed]
+        if not searchable:continue
+        rare=min(searchable,key=lambda t:len(indexed[t]))
+        possibilities=[]
+        for entry,words in indexed[rare]:
+            overlap=len(wanted&words)/len(wanted)
+            if overlap<0.75:continue
+            number=str(item.get("number") or "").strip()
+            title_tokens=set(tokens(entry.get("title","")))
+            if number.isdigit() and number in title_tokens:bonus=.12
+            elif number.isdigit() and any(t.isdigit() and len(t)>=2 for t in title_tokens):
+                # A different explicit figure number is disqualifying.
+                if number not in title_tokens:continue
+                bonus=0
+            else:bonus=0
+            variant=str(item.get("variant") or "").lower()
+            title=str(entry.get("title","")).lower()
+            markers={"chase","flocked","diamond","metallic","blacklight","pearlescent"}
+            required={x for x in markers if x in variant}
+            if not required.issubset(set(tokens(title))):continue
+            # Do not use standard images for an explicitly marked variant.
+            if not required and ("chase" in title or "flocked" in title or "diamond" in title):
                 continue
-            number = str(item.get("number") or "").strip()
-            if number.isdigit() and number not in title_tokens:
-                continue
-            variant = str(item.get("variant") or "").lower()
-            critical = ("chase","flocked","diamond","metallic","blacklight","pearlescent")
-            if any(x in variant and x not in title.lower() for x in critical):
-                continue
-            # Require a high-confidence unique title rather than a fuzzy guess.
-            extra = len(title_tokens - name_tokens - set(tokens(number)) - {"pop","funko","vinyl","figure","games","television","movies"})
-            candidates.append((extra,entry))
-        candidates.sort(key=lambda pair:pair[0])
-        if not candidates or (len(candidates)>1 and candidates[0][0]==candidates[1][0]):
+            franchise=norm(item.get("franchise",""))
+            series=" ".join(str(x) for x in entry.get("series",[]) ) if isinstance(entry.get("series"),list) else str(entry.get("series") or "")
+            context=norm(series+" "+title)
+            series_score=len(franchise&context)/max(1,len(franchise)) if franchise else 0
+            name_score=SequenceMatcher(None," ".join(sorted(wanted))," ".join(sorted(words))).ratio()
+            score=overlap*.68+series_score*.18+name_score*.14+bonus
+            if score>=.68:possibilities.append((score,entry))
+        if not possibilities:continue
+        diagnostics["candidates"]+=1
+        possibilities.sort(key=lambda p:p[0],reverse=True)
+        # Ambiguous matches are not displayed as the wrong variant.
+        if len(possibilities)>1 and possibilities[0][0]-possibilities[1][0]<.055:
+            diagnostics["ambiguous"]+=1
             continue
-        entry=candidates[0][1]
-        results[identity(item)]={"image":entry["image"],"imageSource":CATALOG_URL,"imageProvider":"Community Funko catalog","imageLicense":"Third-party product image; rights retained by owner"}
-    print("Community catalog:",len(catalog),"entries,",len(results),"candidate images")
-    return results
+        best=possibilities[0][1]
+        results[identity(item)]={"image":best["image"],"imageSource":CATALOG_URL,
+          "imageProvider":"Community Funko catalog",
+          "imageLicense":"Third-party product image; rights retained by owner"}
+    diagnostics["accepted"]=len(results)
+    print("Catalog diagnostics:",json.dumps(diagnostics))
+    return results,diagnostics
 
 def main():
     path=ROOT/"pops.json"
@@ -159,7 +188,7 @@ def main():
     data=json.loads(path.read_text(encoding="utf-8"))
     approved=approved_images()
     # The previous version defined catalog_images() but never called it.
-    catalog=catalog_images(data.get("items",[]))
+    catalog,diagnostics=catalog_images(data.get("items",[]))
     found=0
     sources={}
     missing=0
@@ -184,12 +213,12 @@ def main():
             missing+=1
     path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     report={"total":len(data.get("items",[])),"matched":found,"unmatched":missing,
-        "sources":sources,"catalogCandidates":len(catalog),
+        "sources":sources,"catalogCandidates":diagnostics["candidates"],"catalogDiagnostics":diagnostics,
         "note":"Catalog dates to 2021; newer releases may not be included."}
     (ROOT/"image-report.json").write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
     print("Product images:",found,"matched;",missing,"unmatched; by provider:",sources)
     if not catalog and not approved:
-        print("WARNING: No catalog or approved images available; check catalog download and schema.")
+        print("WARNING: Zero images matched. Inspect catalogDiagnostics in image-report.json.")
 
 if __name__=="__main__":
     main()
