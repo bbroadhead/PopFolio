@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Read collection summary from Google Sheets
+      - name: Preserve previously published image mappings\n        run: cp data/pops.json data/previous-pops.json\n      - name: Read collection summary from Google Sheets
         run: python scripts/refresh.py
       - name: Match reusable product images
         run: python scripts/images.py
