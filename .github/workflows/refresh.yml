@@ -26,11 +26,11 @@ jobs:
         run: python scripts/refresh.py
       - name: Match reusable product images
         run: python scripts/images.py
-      - name: Commit updated snapshot
+      - name: Extract embedded images from Google Sheets (read-only)\n        run: python scripts/sheet_images.py\n      - name: Commit updated snapshot
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/portfolio.json data/pops.json data/wishlist.json data/image-report.json data/image-cache.json
+          git add data/portfolio.json data/pops.json data/wishlist.json data/image-report.json data/image-cache.json data/sheet-image-report.json images/sheet/
           if ! git diff --cached --quiet; then
             git commit -m "Refresh collection data"
             for attempt in 1 2 3 4 5; do
