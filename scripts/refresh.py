@@ -103,7 +103,18 @@ def main():
     pathlib.Path("data").mkdir(exist_ok=True)
     pathlib.Path("data/portfolio.json").write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     pathlib.Path("data/pops.json").write_text(json.dumps({"updatedAt": output["updatedAt"], "items": items}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print("Refreshed", len(groups), "franchises and", len(items), "individual Pops")
+    # Wishlist is read-only and never counted toward owned collection totals.
+    wishlist_rows = read_csv_tab("Wishlist")
+    wishlist = []
+    for row in wishlist_rows[1:]:
+        row += [""] * max(0, 5-len(row))
+        if not row[2].strip() or row[2].strip().lower()=="total":
+            continue
+        wishlist.append({"name":row[2].strip(),"number":row[3].strip(),
+                         "marketValue":nullable_num(row[4])})
+    pathlib.Path("data/wishlist.json").write_text(json.dumps(
+        {"updatedAt":output["updatedAt"],"items":wishlist},ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+    print("Refreshed", len(groups), "franchises,", len(items), "individual Pops and", len(wishlist), "wishlist entries")
 
 if __name__ == "__main__":
     main()
