@@ -84,6 +84,8 @@ def fetch_items():
         raise ValueError("Item import incomplete; retaining prior item snapshot. " + "; ".join(errors))
     if len(items) < 100:
         raise ValueError("Unexpectedly few items; retaining prior item snapshot.")
+    missing_numbers = sum(not p["number"] for p in items)
+    print(f"Collection import: {len(items)} Pops, {missing_numbers} missing Pop numbers")
     return items
 
 def main():
