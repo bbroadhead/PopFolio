@@ -37,6 +37,12 @@ $('matches').textContent=filtered.length+' franchises';$('rows').innerHTML=sorte
 async function init(){try{const response=await fetch('./data/portfolio.json?nocache='+Date.now(),{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();if(!Array.isArray(data.groups)||!data.groups.length)throw Error('Empty data');source=data;updateFranchiseDropdown();const stamp=data.updatedAt?new Date(data.updatedAt):null;const date=stamp&&!isNaN(stamp.getTime())?stamp.toLocaleString():'Date unavailable';$('sync').textContent='Data snapshot · '+date;$('updated').textContent='Last successful data sync: '+date;render()}catch(error){$('sync').textContent='Data unavailable';$('updated').textContent='Could not load portfolio data: '+String(error.message||error)}}
 for(const id of ['sort','metric'])$(id).addEventListener('change',render);
 $('reset').addEventListener('click',()=>{selectedFranchises.clear();updateFranchiseDropdown();closeFranchiseMenu();render()});
+document.querySelectorAll('[data-collection-tab]').forEach(button=>button.addEventListener('click',()=>{
+ const tab=button.dataset.collectionTab;
+ document.querySelectorAll('[data-collection-tab]').forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active))});
+ for(const key of ['overview','pops','franchises'])$('collection-'+key).hidden=key!==tab;
+ closeFranchiseMenu();
+}));
 let syncButtonResetTimer;
 async function syncNow(){
  const button=$('sync-now'),panel=$('sync-progress'),meter=$('sync-meter'),stage=$('sync-stage'),pct=$('sync-percent'),detail=$('sync-detail');
