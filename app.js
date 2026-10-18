@@ -1,8 +1,27 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),currency=v=>(v<0?'−':'')+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),signed=v=>(v>=0?'+':'−')+currency(Math.abs(v)),escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let source=null,inventory=[];
-function groups(){if(!source)return[];const selected=$('group').value;return source.groups.filter(g=>selected==='all'||g.name===selected)}
-function updateFranchiseDropdown(){if(!source)return;const select=$('group'),previous=select.value;const names=[...new Set(source.groups.map(g=>g.name))].sort((a,b)=>a.localeCompare(b));select.innerHTML='<option value="all">All franchises</option>'+names.map(n=>'<option value="'+escape(n)+'">'+escape(n)+'</option>').join('');select.value=names.includes(previous)?previous:'all'}
+let selectedFranchises=new Set();
+function groups(){if(!source)return[];return source.groups.filter(g=>selectedFranchises.size===0||selectedFranchises.has(g.name))}
+function updateFranchiseDropdown(){
+ if(!source)return;
+ const names=[...new Set(source.groups.map(g=>g.name))].sort((a,b)=>a.localeCompare(b));
+ selectedFranchises=new Set([...selectedFranchises].filter(n=>names.includes(n)));
+ const menu=$('franchise-options');
+ menu.innerHTML='<label class="franchise-option"><input type="checkbox" value="__all__" '+(selectedFranchises.size===0?'checked':'')+'><span>All franchises</span></label>'+names.map(n=>'<label class="franchise-option"><input type="checkbox" value="'+escape(n)+'" '+(selectedFranchises.has(n)?'checked':'')+'><span>'+escape(n)+'</span></label>').join('');
+ $('group-text').textContent=selectedFranchises.size===0?'All franchises':selectedFranchises.size===1?[...selectedFranchises][0]:selectedFranchises.size+' franchises selected';
+}
+function closeFranchiseMenu(){ $('franchise-options').hidden=true;$('group').setAttribute('aria-expanded','false') }
+$('group').addEventListener('click',()=>{const menu=$('franchise-options');menu.hidden=!menu.hidden;$('group').setAttribute('aria-expanded',String(!menu.hidden))});
+$('franchise-options').addEventListener('change',event=>{
+ const input=event.target;if(!input.matches('input[type="checkbox"]'))return;
+ if(input.value==='__all__'){selectedFranchises.clear()}
+ else if(input.checked){selectedFranchises.add(input.value)}
+ else{selectedFranchises.delete(input.value)}
+ updateFranchiseDropdown();render();
+});
+document.addEventListener('click',event=>{if(!event.target.closest('#franchise-multi'))closeFranchiseMenu()});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')closeFranchiseMenu()});
 function render(){if(!source)return;const filtered=groups(),sum=k=>filtered.reduce((v,x)=>v+(Number(x[k])||0),0),cost=sum('cost'),value=sum('value'),gain=value-cost,roi=cost?100*gain/cost:0;
 $('market').textContent=currency(value);$('cost').textContent=currency(cost);$('gain').textContent=signed(gain);$('roi').textContent=(roi>=0?'+':'')+roi.toFixed(1)+'%';$('count').textContent=sum('count')+' Pops in selection';
 for(const id of ['gain','roi']){$(id).classList.toggle('positive',gain>=0);$(id).classList.toggle('negative',gain<0)}
@@ -16,8 +35,8 @@ const sort=$('sort').value,sorted=[...filtered].sort((a,b)=>sort==='name'?a.name
 $('matches').textContent=filtered.length+' franchises';$('rows').innerHTML=sorted.map(x=>{const pct=x.cost?x.gain/x.cost*100:0;return '<tr><td>'+escape(x.name)+'</td><td>'+x.count+'</td><td>'+currency(x.cost)+'</td><td>'+currency(x.value)+'</td><td class="'+(x.gain>=0?'positive':'negative')+'">'+signed(x.gain)+'</td><td class="'+(pct>=0?'positive':'negative')+'">'+(pct>=0?'+':'')+pct.toFixed(1)+'%</td></tr>'}).join('');
 }
 async function init(){try{const response=await fetch('./data/portfolio.json?nocache='+Date.now(),{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();if(!Array.isArray(data.groups)||!data.groups.length)throw Error('Empty data');source=data;updateFranchiseDropdown();const stamp=data.updatedAt?new Date(data.updatedAt):null;const date=stamp&&!isNaN(stamp.getTime())?stamp.toLocaleString():'Date unavailable';$('sync').textContent='Data snapshot · '+date;$('updated').textContent='Last successful data sync: '+date;render()}catch(error){$('sync').textContent='Data unavailable';$('updated').textContent='Could not load portfolio data: '+String(error.message||error)}}
-for(const id of ['group','sort','metric'])$(id).addEventListener('change',render);
-$('reset').addEventListener('click',()=>{$('group').value='all';$('sort').value='value';$('metric').value='value';render()});
+for(const id of ['sort','metric'])$(id).addEventListener('change',render);
+$('reset').addEventListener('click',()=>{selectedFranchises.clear();updateFranchiseDropdown();closeFranchiseMenu();render()});
 let syncButtonResetTimer;
 async function syncNow(){
  const button=$('sync-now'),panel=$('sync-progress'),meter=$('sync-meter'),stage=$('sync-stage'),pct=$('sync-percent'),detail=$('sync-detail');
