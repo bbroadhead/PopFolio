@@ -45,6 +45,7 @@ document.querySelectorAll('[data-primary-tab]').forEach(button=>button.addEventL
  document.querySelectorAll('[data-primary-tab]').forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active))});
  if(sales)load();window.scrollTo({top:0,behavior:'instant'});
 }));
-window.addEventListener('pageshow',()=>{if(!$('sales-view').hidden)load()});
+window.addEventListener('popfolio-data-updated',event=>{all=event.detail.items||[];render()});
+window.addEventListener('pageshow',()=>{if(!$('sales-view').hidden&&all.length===0)load()});
 load();
 })();
