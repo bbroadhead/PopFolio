@@ -130,3 +130,16 @@
 #collection-franchises #bars{max-height:420px;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;align-content:start;padding-right:6px;scrollbar-width:thin;scrollbar-color:#6d7b9b transparent}
 #collection-franchises #bars .barrow{min-height:28px}
 @media(max-width:650px){#collection-franchises #bars{max-height:340px;padding-right:4px}}
+
+
+/* Full-width franchise selector with inline reset icon */
+#collection-franchises .franchise-controls{display:flex;flex-wrap:nowrap;align-items:end;gap:10px;width:100%}
+#collection-franchises .franchise-control-fields{display:block;flex:1 1 0;min-width:0;width:100%}
+#collection-franchises .franchise-select-wrap{width:100%;min-width:0}
+#collection-franchises .franchise-multi,#collection-franchises .franchise-multi-trigger{width:100%}
+#collection-franchises .franchise-control-actions{display:flex;flex:0 0 44px;align-self:end;margin:0}
+/* Unboxed heading, distinct search and filter panel */
+#collection-pops .item-tools{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+#collection-pops .item-tools>.panelhead{padding:0 0 4px;margin-bottom:14px}
+#collection-pops .pop-search-panel{background:#182338;border:1px solid #35435e;border-radius:14px;padding:16px;margin:0 0 18px}
+@media(max-width:650px){#collection-pops .pop-search-panel{padding:12px}#collection-franchises .franchise-control-actions{flex-basis:44px}}
