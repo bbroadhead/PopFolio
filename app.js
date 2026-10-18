@@ -88,7 +88,7 @@ function parseCsv(input){const rows=[];let row=[],cell='',quoted=false;for(let i
 const importStoreKey='popfolio-import-tracker-v1';
 let importTracker={seen:null,recent:[]};
 try{const saved=JSON.parse(localStorage.getItem(importStoreKey)||'null');if(saved&&Array.isArray(saved.seen)&&Array.isArray(saved.recent))importTracker=saved}catch(e){console.warn('Import history storage unavailable',e)}
-function importIdentity(p){return [p.franchise,p.name,p.number,p.variant,p.date,p.platform,p.cost].map(x=>String(x??'').trim().toLowerCase()).join('|')}
+function importIdentity(p){return [p.franchise,p.name,p.variant,p.date,p.platform].map(x=>String(x??'').trim().toLowerCase()).join('|')}
 function recordImports(list){
  const current=new Set(list.map(importIdentity));
  if(importTracker.seen===null){importTracker.seen=[...current]}
