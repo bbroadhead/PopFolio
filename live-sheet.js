@@ -8,8 +8,11 @@ async function read(tab){
  const base='https://docs.google.com/spreadsheets/d/'+sheet+'/';
  const exportUrl=base+'export?format=csv&gid='+sheetGids[tab]+'&t='+Date.now();
  const gvizUrl=base+'gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(tab)+'&t='+Date.now();
+ // The Dashboard is a summary with non-table rows. Its previous gviz
+ // endpoint works; the raw CSV export is preferred for collectible tabs.
+ const urls=tab==='Dashboard'?[gvizUrl,exportUrl]:[exportUrl,gvizUrl];
  let error;
- for(const url of [exportUrl,gvizUrl]){
+ for(const url of urls){
   try{
    const response=await fetch(url,{cache:'no-store'});
    if(!response.ok)throw Error('HTTP '+response.status);
@@ -17,16 +20,15 @@ async function read(tab){
    if(/^\s*<!doctype html|^\s*<html/i.test(body))throw Error('HTML returned instead of CSV');
    const rows=csv(body);
    if(!rows.length)throw Error('Empty CSV');
-   const first=rows[0].map(x=>String(x||'').trim().toLowerCase().replace(/^\ufeff/,''));
    if(tab==='Dashboard'){
-    if(!rows.some(r=>String(r[0]||'').trim().toUpperCase()==='FRANCHISE'))throw Error('Dashboard summary header missing');
+    if(!rows.some(r=>String(r[0]||'').replace(/^\ufeff/,'').trim().toUpperCase()==='FRANCHISE'))throw Error('Dashboard summary header missing');
    }else if(tab==='Wishlist'){
     if(!rows.some(r=>r.some(x=>String(x||'').trim())))throw Error('Wishlist CSV empty');
-   }else if(!first.includes('name')){
-    throw Error('Collection CSV Name header missing');
+   }else if(!rows[0].some(x=>String(x||'').replace(/^\ufeff/,'').trim().toLowerCase()==='name')){
+    throw Error('Collection Name header missing');
    }
    return rows;
-  }catch(e){error=e;console.warn('Spreadsheet CSV endpoint failed',tab,e)}
+  }catch(e){error=e;console.warn('Spreadsheet endpoint failed',tab,e)}
  }
  throw Error(tab+': '+(error?.message||'CSV unavailable'));
 }
