@@ -23,30 +23,23 @@ async function syncNow(){
  clearTimeout(syncButtonResetTimer);
  const normalLabel=button.dataset.normalLabel||button.textContent;
  button.dataset.normalLabel=normalLabel;
- button.textContent='Syncing…';
- button.disabled=true;panel.hidden=false;meter.value=10;pct.textContent='10%';stage.textContent='Checking published collection snapshot';detail.textContent='Looking for updated collection data and images from GitHub Pages';
+ button.textContent='Syncing…';button.disabled=true;panel.hidden=false;
+ meter.value=5;pct.textContent='5%';stage.textContent='Fetching live spreadsheet';detail.textContent='Reading Google Sheets directly';
  try{
-  const stamp=Date.now();
-  const get=async file=>{const response=await fetch('./data/'+file+'?sync='+stamp,{cache:'no-store'});if(!response.ok)throw Error(file+': HTTP '+response.status);return response.json()};
-  const [portfolio,popData,wishData,imageReport]=await Promise.all([get('portfolio.json'),get('pops.json'),get('wishlist.json'),get('image-report.json')]);
-  if(!Array.isArray(portfolio.groups)||portfolio.groups.length<10||!Array.isArray(popData.items)||popData.items.length<100||!Array.isArray(wishData.items))throw Error('Published snapshot is incomplete; existing data retained');
-  meter.value=75;pct.textContent='75%';stage.textContent='Updating collection views';
-  source=portfolio;inventory=popData.items;wishlist=wishData.items;
+  const result=await window.PopFolioLive.fetchAll((done,total)=>{meter.value=Math.round(5+90*done/total);pct.textContent=meter.value+'%'});
+  source=result.portfolio;inventory=result.items;wishlist=result.wishlist;
   const names=[...new Set(inventory.map(p=>p.franchise))].sort();
   $('pop-franchise').innerHTML='<option value="all">Every franchise</option>'+names.map(n=>'<option value="'+escape(n)+'">'+escape(n)+'</option>').join('');
   render();drawPops();renderFeatures();
-  const stampDate=portfolio.updatedAt?new Date(portfolio.updatedAt):null;
-  const when=stampDate&&!isNaN(stampDate.getTime())?stampDate.toLocaleString():'unknown';
-  const images=inventory.filter(p=>p.image).length;
-  meter.value=100;pct.textContent='100%';stage.textContent='Published snapshot loaded';
-  detail.textContent=inventory.length+' Pops · '+images+' images · Last published '+when+'. New spreadsheet changes appear after the next scheduled GitHub refresh.';
-  $('sync').textContent='Published snapshot · '+when;
-  $('updated').textContent='Last published data sync: '+when;
-  const note=$('image-note');if(note)note.textContent=images+' of '+inventory.length+' Pops have published images. Image extraction from embedded spreadsheet pictures is not yet configured.';
+  window.dispatchEvent(new CustomEvent('popfolio-data-updated',{detail:{items:inventory,source:'Google Sheets'}}));
+  meter.value=100;pct.textContent='100%';stage.textContent='Live spreadsheet sync complete';
+  detail.textContent=inventory.length+' Pops · '+inventory.filter(p=>p.sold!==null).length+' sales · '+inventory.filter(p=>!p.number).length+' missing Pop numbers';
+  $('sync').textContent='Live Google Sheets · '+new Date().toLocaleTimeString();
+  $('updated').textContent='Last live spreadsheet sync: '+new Date().toLocaleString();
   button.textContent='✓ Synced';
  }catch(error){
+  stage.textContent='Sync failed';detail.textContent=String(error.message||error)+' · Existing collection retained';
   button.textContent='✕ Sync failed';
-  stage.textContent='Sync failed';detail.textContent=String(error.message||error)+' · Existing collection retained';$('sync').textContent='Published snapshot unavailable';
  }finally{
   button.disabled=false;
   syncButtonResetTimer=setTimeout(()=>{button.textContent=normalLabel},4000);
