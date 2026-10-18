@@ -170,3 +170,10 @@
 .recent-pop-values span{display:flex;flex-direction:column;gap:2px}
 .recent-pop-values small{color:#9eafca;font-size:10px;font-weight:500}
 @media(max-width:650px){.recent-purchases-heading{align-items:start;flex-direction:column;gap:3px}.recent-pop{grid-template-columns:58px minmax(0,1fr);gap:10px;padding:10px}.recent-pop-image{width:58px;height:70px}.recent-pop-values{grid-column:2;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;text-align:left;white-space:normal}.recent-pop-values span{font-size:12px}}
+
+/* Compact search reset control; let the input use the remaining row width */
+#collection-pops .pop-search-row{display:flex;width:100%;align-items:end;gap:10px}
+#collection-pops .pop-search-field{flex:1 1 0;min-width:0;width:auto}
+#collection-pops .pop-search-field input{display:block;width:100%;box-sizing:border-box}
+#collection-pops .pop-search-row .pop-clear{flex:0 0 46px;width:46px;min-width:46px;height:46px;min-height:46px;padding:0;display:grid;place-items:center;font-size:26px;line-height:1;border-radius:11px;cursor:pointer}
+@media(max-width:650px){#collection-pops .pop-search-row{gap:8px}#collection-pops .pop-search-row .pop-clear{flex-basis:46px;padding:0;font-size:26px}}
