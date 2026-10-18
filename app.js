@@ -1,7 +1,8 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),currency=v=>(v<0?'−':'')+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),signed=v=>(v>=0?'+':'−')+currency(Math.abs(v)),escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let source=null,inventory=[];
-function groups(){if(!source)return[];const q=$('search').value.toLowerCase(),group=$('group').value;return source.groups.filter(x=>x.name.toLowerCase().includes(q)&&(group==='all'||group==='it'&&x.name.startsWith('IT')||group==='westeros'&&['Game of Thrones','House of the Dragon','Knight of the Seven Kingdoms, A'].includes(x.name)||group==='witcher'&&x.name.startsWith('Witcher')||group==='positive'&&x.gain>0||group==='negative'&&x.gain<0))}
+function groups(){if(!source)return[];const selected=$('group').value;return source.groups.filter(g=>selected==='all'||g.name===selected)}
+function updateFranchiseDropdown(){if(!source)return;const select=$('group'),previous=select.value;const names=[...new Set(source.groups.map(g=>g.name))].sort((a,b)=>a.localeCompare(b));select.innerHTML='<option value="all">All franchises</option>'+names.map(n=>'<option value="'+escape(n)+'">'+escape(n)+'</option>').join('');select.value=names.includes(previous)?previous:'all'}
 function render(){if(!source)return;const filtered=groups(),sum=k=>filtered.reduce((v,x)=>v+(Number(x[k])||0),0),cost=sum('cost'),value=sum('value'),gain=value-cost,roi=cost?100*gain/cost:0;
 $('market').textContent=currency(value);$('cost').textContent=currency(cost);$('gain').textContent=signed(gain);$('roi').textContent=(roi>=0?'+':'')+roi.toFixed(1)+'%';$('count').textContent=sum('count')+' Pops in selection';
 for(const id of ['gain','roi']){$(id).classList.toggle('positive',gain>=0);$(id).classList.toggle('negative',gain<0)}
@@ -14,9 +15,9 @@ $('bars').innerHTML=top.map(x=>{const v=score(x),label=metric==='roi'?(v>=0?'+':
 const sort=$('sort').value,sorted=[...filtered].sort((a,b)=>sort==='name'?a.name.localeCompare(b.name):sort==='roi'?((b.cost?b.gain/b.cost:0)-(a.cost?a.gain/a.cost:0)):b[sort]-a[sort]);
 $('matches').textContent=filtered.length+' franchises';$('rows').innerHTML=sorted.map(x=>{const pct=x.cost?x.gain/x.cost*100:0;return '<tr><td>'+escape(x.name)+'</td><td>'+x.count+'</td><td>'+currency(x.cost)+'</td><td>'+currency(x.value)+'</td><td class="'+(x.gain>=0?'positive':'negative')+'">'+signed(x.gain)+'</td><td class="'+(pct>=0?'positive':'negative')+'">'+(pct>=0?'+':'')+pct.toFixed(1)+'%</td></tr>'}).join('');
 }
-async function init(){try{const response=await fetch('./data/portfolio.json?nocache='+Date.now(),{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();if(!Array.isArray(data.groups)||!data.groups.length)throw Error('Empty data');source=data;const stamp=data.updatedAt?new Date(data.updatedAt):null;const date=stamp&&!isNaN(stamp.getTime())?stamp.toLocaleString():'Date unavailable';$('sync').textContent='Data snapshot · '+date;$('updated').textContent='Last successful data sync: '+date;render()}catch(error){$('sync').textContent='Data unavailable';$('updated').textContent='Could not load portfolio data: '+String(error.message||error)}}
-for(const id of ['search','group','sort','metric'])$(id).addEventListener(id==='search'?'input':'change',render);
-$('reset').addEventListener('click',()=>{$('search').value='';$('group').value='all';$('sort').value='value';$('metric').value='value';render()});
+async function init(){try{const response=await fetch('./data/portfolio.json?nocache='+Date.now(),{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();if(!Array.isArray(data.groups)||!data.groups.length)throw Error('Empty data');source=data;updateFranchiseDropdown();const stamp=data.updatedAt?new Date(data.updatedAt):null;const date=stamp&&!isNaN(stamp.getTime())?stamp.toLocaleString():'Date unavailable';$('sync').textContent='Data snapshot · '+date;$('updated').textContent='Last successful data sync: '+date;render()}catch(error){$('sync').textContent='Data unavailable';$('updated').textContent='Could not load portfolio data: '+String(error.message||error)}}
+for(const id of ['group','sort','metric'])$(id).addEventListener('change',render);
+$('reset').addEventListener('click',()=>{$('group').value='all';$('sort').value='value';$('metric').value='value';render()});
 let syncButtonResetTimer;
 async function syncNow(){
  const button=$('sync-now'),panel=$('sync-progress'),meter=$('sync-meter'),stage=$('sync-stage'),pct=$('sync-percent'),detail=$('sync-detail');
@@ -27,7 +28,7 @@ async function syncNow(){
  meter.value=5;pct.textContent='5%';stage.textContent='Fetching live spreadsheet';detail.textContent='Reading Google Sheets directly';
  try{
   const result=await window.PopFolioLive.fetchAll((done,total)=>{meter.value=Math.round(5+90*done/total);pct.textContent=meter.value+'%'});
-  source=result.portfolio;inventory=result.items;wishlist=result.wishlist;
+  source=result.portfolio;inventory=result.items;wishlist=result.wishlist;updateFranchiseDropdown();
   const names=[...new Set(inventory.map(p=>p.franchise))].sort();
   $('pop-franchise').innerHTML='<option value="all">Every franchise</option>'+names.map(n=>'<option value="'+escape(n)+'">'+escape(n)+'</option>').join('');
   render();drawPops();renderFeatures();
