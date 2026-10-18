@@ -120,3 +120,7 @@
 .franchise-ledger tbody td:nth-child(5)::before{content:"Gain / loss"}
 .franchise-ledger tbody td:nth-child(6)::before{content:"ROI"}
 }
+
+/* Three dedicated Collection views */
+.collection-subtabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+#collection-pops .item-tools{margin-top:0}
