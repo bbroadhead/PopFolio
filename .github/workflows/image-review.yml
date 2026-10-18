@@ -1,0 +1,38 @@
+name: Find Pop image candidates
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_lookups:
+        description: 'Number of unique Pops to search (0-100)'
+        required: true
+        default: '40'
+        type: choice
+        options: ['10', '25', '40', '75', '100']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: popfolio-image-review
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Find reusable image candidates
+        env:
+          MAX_LOOKUPS: ${{ inputs.max_lookups }}
+        run: python scripts/image_review.py
+      - name: Upload review report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pop-image-review
+          path: image-review/
+          retention-days: 30
