@@ -33,3 +33,15 @@
 .sales-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:12px}.sales-item{min-width:0;background:#1c2940;border:1px solid #35435e;border-radius:13px;padding:15px}.sales-item-title{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}.sales-item-title strong{font-size:16px;overflow-wrap:anywhere}.sales-item-title strong span{color:#c4b5fd;font-size:13px}.sales-item-title small{color:#aebbd3;overflow-wrap:anywhere}
 .sales-item-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.sales-item-values>div{min-width:0;display:flex;flex-direction:column;gap:4px}.sales-item-values strong{font-size:17px;overflow-wrap:anywhere}.sales-item-values .sales-roi{grid-column:1/-1;border-top:1px solid #34425c;padding-top:10px;flex-direction:row;align-items:center;justify-content:space-between}.sales-disclaimer{font-size:12px;line-height:1.6;margin-top:18px!important}
 @media(max-width:560px){.sales-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.sales-kpis article{padding:13px}.sales-kpis strong{font-size:20px}.sales-panel{padding:14px}.sales-barline{grid-template-columns:minmax(0,80px) minmax(0,1fr) auto;gap:7px}.sales-barline strong{font-size:11px}.sales-controls{flex-wrap:wrap}.sales-controls input{flex-basis:100%}.sales-controls select{max-width:100%;flex:1}.sales-item-values strong{font-size:16px}}
+
+
+/* Collection controls: balanced desktop layout and stacked phone layout */
+.franchise-controls{display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.franchise-control-fields{display:grid;grid-template-columns:minmax(180px,1.25fr) minmax(170px,1fr);gap:12px;flex:1 1 420px;min-width:0}
+.franchise-select-wrap{display:flex;flex-direction:column;gap:7px;min-width:0}
+.franchise-select-wrap>span{font-size:11px;font-weight:700;color:#aebbd3;letter-spacing:.04em;text-transform:uppercase}
+.franchise-select-wrap select{width:100%;min-width:0;max-width:100%;padding:12px 34px 12px 13px;border:1px solid #40506d;border-radius:11px;background:#1c2940;color:#f1f4fc;text-overflow:ellipsis}
+.franchise-control-actions{display:flex;gap:10px;align-items:center;flex:0 0 auto}
+.franchise-control-actions .button{min-height:44px;white-space:nowrap}
+.franchise-control-actions .sync-button{background:#6954b8;color:#fff;border-color:#8570d7;font-weight:700}
+@media(max-width:650px){.franchise-controls{display:block}.franchise-control-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.franchise-select-wrap select{font-size:13px;padding:12px 26px 12px 9px}.franchise-control-actions{margin-top:11px;display:grid;grid-template-columns:1fr 1fr}.franchise-control-actions .button{width:100%;padding:12px 9px}}
