@@ -21,7 +21,7 @@ function render(){
  <article><small>Items sold</small><strong>${list.length}</strong><span>Recorded sales</span></article>
  <article><small>Sale proceeds</small><strong>${fmt(sales)}</strong><span>Sold-for amounts</span></article>
  <article><small>All-in purchase cost</small><strong>${fmt(costs)}</strong><span>Cost of sold items</span></article>
- <article><small>Recorded net profit</small><strong class="${profit<0?'sales-negative':'sales-positive'}">${fmt(profit)}</strong><span>${missing?missing+' sale(s) missing net profit':'All sold items accounted for'}</span></article>
+ <article><small>Recorded net profit</small><strong class="${profit<0?'sales-negative':'sales-positive'}">${withProfit.length?fmt(profit):'—'}</strong><span>${missing?missing+' sale(s) missing net profit':'All sold items accounted for'}</span></article>
  <article><small>Net ROI</small><strong>${profitCosts>0?(100*profit/profitCosts).toFixed(1)+'%':'—'}</strong><span>Profit ÷ cost for ${withProfit.length} item(s) with recorded profit</span></article>
  </div>
  <div class="sales-charts">
