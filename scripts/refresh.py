@@ -25,7 +25,7 @@ FRANCHISE_TABS = [
 "Knight of the Seven Kingdoms, A","Lord of the Rings, The","Mandalorian, The",
 "Marvel","Miscellaneous","Monty Python and the Holy Grail","Myths","Outlander",
 "Overwatch","Parks and Recreation","Pokémon","Sonic the Hedgehog","Squid Game",
-"Stranger Things","Vampire Diaries, The","World of Warcraft","Willy Wonka",
+"Stranger Things","Star Wars","Vampire Diaries, The","World of Warcraft","Willy Wonka",
 "Witcher 3: Wild Hunt, The","Witcher (Netflix), The","USAF"
 ]
 
