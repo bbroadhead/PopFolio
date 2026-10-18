@@ -17,7 +17,7 @@ async function read(tab){
    if(/^\s*<!doctype html|^\s*<html/i.test(body))throw Error('HTML returned instead of CSV');
    const rows=csv(body);
    if(!rows.length)throw Error('Empty CSV');
-   const first=rows[0].map(x=>String(x||'').trim().toLowerCase().replace(/^\\ufeff/,''));
+   const first=rows[0].map(x=>String(x||'').trim().toLowerCase().replace(/^\ufeff/,''));
    if(tab==='Dashboard'){
     if(!rows.some(r=>String(r[0]||'').trim().toUpperCase()==='FRANCHISE'))throw Error('Dashboard summary header missing');
    }else if(tab==='Wishlist'){
