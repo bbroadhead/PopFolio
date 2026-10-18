@@ -102,3 +102,21 @@
 .collection-subtabs{grid-template-columns:repeat(2,minmax(0,1fr))}
 .overview-pop-explorer{margin-top:24px}
 .overview-pop-explorer .item-tools{margin-top:0}
+
+
+/* Franchise ledger: preserve every field without sideways scrolling on phones */
+@media(max-width:700px){
+.franchise-ledger{max-height:none;overflow:visible;width:100%;min-width:0}
+.franchise-ledger table,.franchise-ledger tbody{display:block;width:100%;min-width:0;white-space:normal}
+.franchise-ledger thead{display:none}
+.franchise-ledger tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;padding:15px;margin:0 0 11px;border:1px solid #35435e;border-radius:12px;background:#19263b;min-width:0}
+.franchise-ledger tbody td{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:4px;min-width:0;padding:0;border:0;text-align:left;overflow-wrap:anywhere;font-size:14px;font-weight:650;line-height:1.3;font-variant-numeric:tabular-nums}
+.franchise-ledger tbody td::before{font-size:10px;line-height:1.2;letter-spacing:.055em;text-transform:uppercase;font-weight:700;color:#9eafca}
+.franchise-ledger tbody td:nth-child(1){grid-column:1/-1;font-size:16px;font-weight:750;padding-bottom:9px;border-bottom:1px solid #34425b}
+.franchise-ledger tbody td:nth-child(1)::before{content:"Franchise"}
+.franchise-ledger tbody td:nth-child(2)::before{content:"Pops"}
+.franchise-ledger tbody td:nth-child(3)::before{content:"All-in cost"}
+.franchise-ledger tbody td:nth-child(4)::before{content:"Market value"}
+.franchise-ledger tbody td:nth-child(5)::before{content:"Gain / loss"}
+.franchise-ledger tbody td:nth-child(6)::before{content:"ROI"}
+}
