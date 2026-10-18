@@ -149,5 +149,5 @@ async function loadWishlist(){try{const r=await fetch('./data/wishlist.json?cach
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 loadWishlist();
 
-init();loadPops();
+init();loadPops().then(()=>syncNow()).catch(error=>console.warn('Automatic spreadsheet refresh unavailable; showing saved snapshot',error));
 })();
