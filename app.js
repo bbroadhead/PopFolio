@@ -50,7 +50,7 @@ for(const id of ['reset','overview-reset'])$(id).addEventListener('click',()=>{s
 document.querySelectorAll('[data-collection-tab]').forEach(button=>button.addEventListener('click',()=>{
  const tab=button.dataset.collectionTab;
  document.querySelectorAll('[data-collection-tab]').forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active))});
- for(const key of ['overview','pops','franchises'])$('collection-'+key).hidden=key!==tab;
+ for(const key of ['overview','franchises'])$('collection-'+key).hidden=key!==tab;
  closeFranchiseMenu();
 }));
 let syncButtonResetTimer;
