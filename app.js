@@ -98,7 +98,8 @@ function purchaseTimestamp(value){
 }
 function renderRecentPurchases(){
  const target=$('recent-purchases-list');if(!target)return;
- const selected=inventory.map((p,index)=>({p,index,time:purchaseTimestamp(p.date)})).filter(x=>(selectedFranchises.size===0||selectedFranchises.has(x.p.franchise))&&x.time!==null);
+ const today=new Date();const todayUTC=Date.UTC(today.getFullYear(),today.getMonth(),today.getDate());
+ const selected=inventory.map((p,index)=>({p,index,time:purchaseTimestamp(p.date)})).filter(x=>(selectedFranchises.size===0||selectedFranchises.has(x.p.franchise))&&x.time!==null&&x.time<=todayUTC);
  selected.sort((a,b)=>b.time-a.time||b.index-a.index);
  const recent=selected.slice(0,5).map(x=>x.p);
  target.innerHTML=recent.map(p=>'<article class="recent-pop"><div class="recent-pop-image">'+(p.image?'<img loading="lazy" src="'+escape(p.image)+'" alt="" onerror="this.replaceWith(document.createTextNode(\'◈\'))">':'◈')+'</div><div class="recent-pop-info"><strong>'+escape(p.name)+'</strong><span>'+escape(p.franchise)+' · #'+escape(p.number||'—')+'</span><span>'+escape(p.variant||'Standard')+'</span><span>'+escape(p.platform||'Retailer not recorded')+' · '+escape(p.date)+'</span></div><div class="recent-pop-values"><span><small>All-in cost</small>'+(p.cost===null||p.cost===undefined?'—':currency(p.cost))+'</span><span><small>Market value</small>'+(p.marketValue===null||p.marketValue===undefined?'—':currency(p.marketValue))+'</span></div></article>').join('')||'<p class="muted">No purchases with recognizable dates for the selected franchises. Try Sync to load the latest spreadsheet.</p>';
