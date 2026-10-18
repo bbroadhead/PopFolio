@@ -87,8 +87,8 @@ async function syncNow(){
 function parseCsv(input){const rows=[];let row=[],cell='',quoted=false;for(let i=0;i<input.length;i++){const c=input[i];if(c==='"'){if(quoted&&input[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(c===','&&!quoted){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&input[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell=''}else cell+=c}if(cell||row.length){row.push(cell);rows.push(row)}return rows}
 function purchaseTimestamp(value){
  const raw=String(value||'').trim();if(!raw)return null;
- const iso=raw.match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})(?:[T ]|$)/);
- const us=raw.match(/^(\\d{1,2})\\/(\\d{1,2})\\/(\\d{2,4})(?:\\s|$)/);
+ const iso=raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ]|$)/);
+ const us=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s|$)/);
  let y,m,d;
  if(iso){y=+iso[1];m=+iso[2];d=+iso[3]}
  else if(us){m=+us[1];d=+us[2];y=+us[3];if(y<100)y+=2000}
