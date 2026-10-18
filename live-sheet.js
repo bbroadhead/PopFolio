@@ -4,7 +4,14 @@ const tabs=["Back to the Future","Cyberpunk 2077","DC Comics","Dexter","Diablo",
 function csv(s){let rows=[],row=[],cell='',q=false;for(let i=0;i<s.length;i++){const c=s[i];if(c==='"'){if(q&&s[i+1]==='"'){cell+='"';i++}else q=!q}else if(c===','&&!q){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&s[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell=''}else cell+=c}if(cell||row.length){row.push(cell);rows.push(row)}return rows}
 function num(x){const t=String(x??'').trim().replace(/[$,%]/g,'').replace(/,/g,'');if(!t)return null;const v=Number(t.replace(/^\((.*)\)$/,'-$1'));return Number.isFinite(v)?v:null}
 async function read(tab){const url='https://docs.google.com/spreadsheets/d/'+sheet+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(tab)+'&t='+Date.now();const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error(tab+': HTTP '+r.status);const rows=csv(await r.text());if(!rows.length)throw Error(tab+': empty');return rows}
-function items(tab,rows){const h=rows[0].map(x=>x.toLowerCase().trim().replace(/^\ufeff/,'')),idx=(name,fallback)=>{const i=h.indexOf(name.toLowerCase());return i<0?fallback:i};const c={name:idx('Name',2),number:idx('Pop #',3),variant:idx('Variant / Exclusive',4),platform:idx('Purchased From',6),date:idx('Purchase Date',7),item:idx('Item Price',9),cost:idx('All-in Price',10),market:idx('Current Market Value',11),sold:idx('Sold for',14),profit:idx('Net Profit',15)};const val=(r,k)=>String(r[c[k]]??'').trim();return rows.slice(1).flatMap((r,i)=>{const name=val(r,'name');if(!name||/^total\b/i.test(name))return [];return [{id:tab+':'+(i+2),franchise:tab,name,number:val(r,'number'),variant:val(r,'variant'),platform:val(r,'platform'),date:val(r,'date'),itemPrice:num(val(r,'item')),cost:num(val(r,'cost')),marketValue:num(val(r,'market')),sold:num(val(r,'sold')),netProfit:num(val(r,'profit')),image:null}]})}
+function items(tab,rows){
+ const h=rows[0].map(x=>String(x||'').toLowerCase().trim().replace(/^\ufeff/,''));
+ const idx=(name,fallback)=>{const i=h.indexOf(name.toLowerCase());return i<0?fallback:i};
+ const c={name:idx('Name',2),number:idx('Pop #',3),variant:idx('Variant / Exclusive',4),platform:idx('Purchased From',6),date:idx('Purchase Date',7),item:idx('Item Price',9),cost:idx('All-in Price',10),market:idx('Current Market Value',11),sold:idx('Sold for',14),profit:idx('Net Profit',15)};
+ const val=(r,k)=>String(r[c[k]]??'').trim();
+ return rows.slice(1).flatMap((r,i)=>{const name=val(r,'name');if(!name||/^total\b/i.test(name))return [];
+ return [{id:tab+':'+(i+2),franchise:tab,name,number:val(r,'number'),variant:val(r,'variant'),platform:val(r,'platform'),date:val(r,'date'),itemPrice:num(val(r,'item')),cost:num(val(r,'cost')),marketValue:num(val(r,'market')),sold:num(val(r,'sold')),netProfit:num(val(r,'profit')),image:null}]});
+}
 function repairKnownNumbers(list){
  const known=[
   ['Horror: Miscellaneous','Danny Torrance','458'],
