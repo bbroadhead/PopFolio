@@ -124,3 +124,9 @@
 /* Three dedicated Collection views */
 .collection-subtabs{grid-template-columns:repeat(3,minmax(0,1fr))}
 #collection-pops .item-tools{margin-top:0}
+
+
+/* Scroll franchise performance bars within their panel when selection is long */
+#collection-franchises #bars{max-height:420px;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;align-content:start;padding-right:6px;scrollbar-width:thin;scrollbar-color:#6d7b9b transparent}
+#collection-franchises #bars .barrow{min-height:28px}
+@media(max-width:650px){#collection-franchises #bars{max-height:340px;padding-right:4px}}
