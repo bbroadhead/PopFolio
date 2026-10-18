@@ -7,20 +7,30 @@ function updateFranchiseDropdown(){
  if(!source)return;
  const names=[...new Set(source.groups.map(g=>g.name))].sort((a,b)=>a.localeCompare(b));
  selectedFranchises=new Set([...selectedFranchises].filter(n=>names.includes(n)));
- const menu=$('franchise-options');
- menu.innerHTML='<label class="franchise-option"><input type="checkbox" value="__all__" '+(selectedFranchises.size===0?'checked':'')+'><span>All franchises</span></label>'+names.map(n=>'<label class="franchise-option"><input type="checkbox" value="'+escape(n)+'" '+(selectedFranchises.has(n)?'checked':'')+'><span>'+escape(n)+'</span></label>').join('');
- $('group-text').textContent=selectedFranchises.size===0?'All franchises':selectedFranchises.size===1?[...selectedFranchises][0]:selectedFranchises.size+' franchises selected';
+ const text=selectedFranchises.size===0?'All franchises':selectedFranchises.size===1?[...selectedFranchises][0]:selectedFranchises.size+' franchises selected';
+ for(const prefix of ['', 'overview-']){
+  const menu=$(prefix+'franchise-options');
+  menu.innerHTML='<label class="franchise-option"><input type="checkbox" value="__all__" '+(selectedFranchises.size===0?'checked':'')+'><span>All franchises</span></label>'+names.map(n=>'<label class="franchise-option"><input type="checkbox" value="'+escape(n)+'" '+(selectedFranchises.has(n)?'checked':'')+'><span>'+escape(n)+'</span></label>').join('');
+  $(prefix+'group-text').textContent=text;
+ }
 }
-function closeFranchiseMenu(){ $('franchise-options').hidden=true;$('group').setAttribute('aria-expanded','false') }
-$('group').addEventListener('click',()=>{const menu=$('franchise-options');menu.hidden=!menu.hidden;$('group').setAttribute('aria-expanded',String(!menu.hidden))});
-$('franchise-options').addEventListener('change',event=>{
- const input=event.target;if(!input.matches('input[type="checkbox"]'))return;
- if(input.value==='__all__'){selectedFranchises.clear()}
- else if(input.checked){selectedFranchises.add(input.value)}
- else{selectedFranchises.delete(input.value)}
- updateFranchiseDropdown();render();
-});
-document.addEventListener('click',event=>{if(!event.target.closest('#franchise-multi'))closeFranchiseMenu()});
+function closeFranchiseMenu(){
+ for(const prefix of ['', 'overview-']){$(prefix+'franchise-options').hidden=true;$(prefix+'group').setAttribute('aria-expanded','false')}
+}
+for(const prefix of ['', 'overview-']){
+ $(prefix+'group').addEventListener('click',()=>{
+  const menu=$(prefix+'franchise-options'),open=menu.hidden;
+  closeFranchiseMenu();menu.hidden=!open;$(prefix+'group').setAttribute('aria-expanded',String(open));
+ });
+ $(prefix+'franchise-options').addEventListener('change',event=>{
+  const input=event.target;if(!input.matches('input[type="checkbox"]'))return;
+  if(input.value==='__all__')selectedFranchises.clear();
+  else if(input.checked)selectedFranchises.add(input.value);
+  else selectedFranchises.delete(input.value);
+  updateFranchiseDropdown();render();
+ });
+}
+document.addEventListener('click',event=>{if(!event.target.closest('.franchise-multi'))closeFranchiseMenu()});
 document.addEventListener('keydown',event=>{if(event.key==='Escape')closeFranchiseMenu()});
 function render(){if(!source)return;const filtered=groups(),sum=k=>filtered.reduce((v,x)=>v+(Number(x[k])||0),0),cost=sum('cost'),value=sum('value'),gain=value-cost,roi=cost?100*gain/cost:0;
 $('market').textContent=currency(value);$('cost').textContent=currency(cost);$('gain').textContent=signed(gain);$('roi').textContent=(roi>=0?'+':'')+roi.toFixed(1)+'%';$('count').textContent=sum('count')+' Pops in selection';
@@ -36,7 +46,7 @@ $('matches').textContent=filtered.length+' franchises';$('rows').innerHTML=sorte
 }
 async function init(){try{const response=await fetch('./data/portfolio.json?nocache='+Date.now(),{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();if(!Array.isArray(data.groups)||!data.groups.length)throw Error('Empty data');source=data;updateFranchiseDropdown();const stamp=data.updatedAt?new Date(data.updatedAt):null;const date=stamp&&!isNaN(stamp.getTime())?stamp.toLocaleString():'Date unavailable';$('sync').textContent='Data snapshot · '+date;$('updated').textContent='Last successful data sync: '+date;render()}catch(error){$('sync').textContent='Data unavailable';$('updated').textContent='Could not load portfolio data: '+String(error.message||error)}}
 for(const id of ['sort','metric'])$(id).addEventListener('change',render);
-$('reset').addEventListener('click',()=>{selectedFranchises.clear();updateFranchiseDropdown();closeFranchiseMenu();render()});
+for(const id of ['reset','overview-reset'])$(id).addEventListener('click',()=>{selectedFranchises.clear();updateFranchiseDropdown();closeFranchiseMenu();render()});
 document.querySelectorAll('[data-collection-tab]').forEach(button=>button.addEventListener('click',()=>{
  const tab=button.dataset.collectionTab;
  document.querySelectorAll('[data-collection-tab]').forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active))});
