@@ -143,3 +143,9 @@
 #collection-pops .item-tools>.panelhead{padding:0 0 4px;margin-bottom:14px}
 #collection-pops .pop-search-panel{background:#182338;border:1px solid #35435e;border-radius:14px;padding:16px;margin:0 0 18px}
 @media(max-width:650px){#collection-pops .pop-search-panel{padding:12px}#collection-franchises .franchise-control-actions{flex-basis:44px}}
+
+/* Couple artwork aligned with collection title */
+.hero-title-row{display:flex;align-items:center;gap:18px;min-width:0}
+.hero-couple-art{width:clamp(90px,12vw,165px);height:auto;object-fit:contain;flex:none}
+.hero-title-row>div{min-width:0}
+@media(max-width:560px){.hero-title-row{gap:10px}.hero-couple-art{width:95px}.hero-title-row h1{font-size:clamp(22px,6vw,32px)}}
