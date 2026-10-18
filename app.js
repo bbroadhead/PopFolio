@@ -17,8 +17,13 @@ $('matches').textContent=filtered.length+' franchises';$('rows').innerHTML=sorte
 async function init(){try{const response=await fetch('./data/portfolio.json?nocache='+Date.now(),{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();if(!Array.isArray(data.groups)||!data.groups.length)throw Error('Empty data');source=data;const stamp=data.updatedAt?new Date(data.updatedAt):null;const date=stamp&&!isNaN(stamp.getTime())?stamp.toLocaleString():'Date unavailable';$('sync').textContent='Data snapshot · '+date;$('updated').textContent='Last successful data sync: '+date;render()}catch(error){$('sync').textContent='Data unavailable';$('updated').textContent='Could not load portfolio data: '+String(error.message||error)}}
 for(const id of ['search','group','sort','metric'])$(id).addEventListener(id==='search'?'input':'change',render);
 $('reset').addEventListener('click',()=>{$('search').value='';$('group').value='all';$('sort').value='value';$('metric').value='value';render()});
+let syncButtonResetTimer;
 async function syncNow(){
  const button=$('sync-now'),panel=$('sync-progress'),meter=$('sync-meter'),stage=$('sync-stage'),pct=$('sync-percent'),detail=$('sync-detail');
+ clearTimeout(syncButtonResetTimer);
+ const normalLabel=button.dataset.normalLabel||button.textContent;
+ button.dataset.normalLabel=normalLabel;
+ button.textContent='Syncing…';
  button.disabled=true;panel.hidden=false;meter.value=10;pct.textContent='10%';stage.textContent='Checking published collection snapshot';detail.textContent='Looking for updated collection data and images from GitHub Pages';
  try{
   const stamp=Date.now();
@@ -38,9 +43,14 @@ async function syncNow(){
   $('sync').textContent='Published snapshot · '+when;
   $('updated').textContent='Last published data sync: '+when;
   const note=$('image-note');if(note)note.textContent=images+' of '+inventory.length+' Pops have published images. Image extraction from embedded spreadsheet pictures is not yet configured.';
+  button.textContent='✓ Synced';
  }catch(error){
+  button.textContent='✕ Sync failed';
   stage.textContent='Sync failed';detail.textContent=String(error.message||error)+' · Existing collection retained';$('sync').textContent='Published snapshot unavailable';
- }finally{button.disabled=false}
+ }finally{
+  button.disabled=false;
+  syncButtonResetTimer=setTimeout(()=>{button.textContent=normalLabel},4000);
+ }
 }
 function parseCsv(input){const rows=[];let row=[],cell='',quoted=false;for(let i=0;i<input.length;i++){const c=input[i];if(c==='"'){if(quoted&&input[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(c===','&&!quoted){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&input[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell=''}else cell+=c}if(cell||row.length){row.push(cell);rows.push(row)}return rows}
 function drawPops(){const q=$('pop-search').value.toLowerCase(),filter=$('pop-filter').value,franchise=$('pop-franchise').value;const counts=new Map();for(const p of inventory){const key=(p.franchise+'|'+p.name+'|'+p.number+'|'+p.variant).toLowerCase();counts.set(key,(counts.get(key)||0)+1)}const matched=inventory.filter(p=>{const key=(p.franchise+'|'+p.name+'|'+p.number+'|'+p.variant).toLowerCase();return (franchise==='all'||p.franchise===franchise)&&[p.name,p.number,p.variant,p.franchise].join(' ').toLowerCase().includes(q)&&(filter==='all'||filter==='duplicates'&&counts.get(key)>1||filter==='missing'&&p.marketValue===null||filter==='exclusive'&&/exclusive|limited|le [0-9]|fundays/i.test(p.variant)||filter==='sticker'&&/sticker|chase|convention|comic.con|exclusive/i.test(p.variant))});$('item-count').textContent=matched.length+' Pops';$('pop-results').innerHTML=matched.slice(0,120).map(p=>'<article class="pop-card" data-pop-id="'+escape(p.id)+'" tabindex="0" role="button" aria-label="View details for '+escape(p.name)+'"><div class="pop-image">'+(p.image?'<img loading="lazy" alt="" src="'+escape(p.image)+'" onerror="this.replaceWith(document.createTextNode(\'◈\'))">':'◈')+'</div><div class="pop-details"><strong>'+escape(p.name)+'</strong><small>'+escape(p.franchise)+' · #'+escape(p.number||'—')+'</small><small>'+escape(p.variant||'Standard')+'</small><small class="pop-retailer">Purchased from: '+escape(p.platform||'Not recorded')+'</small><div class="pop-money"><span>Cost: '+(p.cost===null?'—':currency(p.cost))+'</span><span>Value: '+(p.marketValue===null?'—':currency(p.marketValue))+'</span></div><a class="image-lookup" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?tbm=isch&q='+encodeURIComponent('Funko Pop '+p.name+' '+p.number+' '+p.variant)+'">Find photo ↗</a></div></article>').join('')||'<div class="muted">No matching Pops found.</div>';if(matched.length>120)$('item-count').textContent+=' (first 120 shown)'}
