@@ -62,7 +62,7 @@ def fetch_items():
                     id=f"{tab}:{index}", franchise=tab, name=name, number=row[3].strip(),
                     variant=row[4].strip(), platform=row[6].strip(), date=row[7].strip(),
                     itemPrice=nullable_num(row[9]), cost=nullable_num(row[10]),
-                    marketValue=nullable_num(row[11]), sold=nullable_num(row[14]),
+                    marketValue=nullable_num(row[11]), sold=nullable_num(row[14]),\n                    netProfit=nullable_num(row[15]),
                     image=None))
         except Exception as exc:
             errors.append(f"{tab}: {exc}")
