@@ -54,9 +54,11 @@ document.querySelectorAll('[data-collection-tab]').forEach(button=>button.addEve
  closeFranchiseMenu();
 }));
 let syncButtonResetTimer;
+let syncProgressHideTimer;
 async function syncNow(){
  const button=$('sync-now'),panel=$('sync-progress'),meter=$('sync-meter'),stage=$('sync-stage'),pct=$('sync-percent'),detail=$('sync-detail');
  clearTimeout(syncButtonResetTimer);
+ clearTimeout(syncProgressHideTimer);
  const normalLabel=button.dataset.normalLabel||button.textContent;
  button.dataset.normalLabel=normalLabel;
  button.textContent='Syncing…';button.disabled=true;panel.hidden=false;
@@ -73,6 +75,7 @@ async function syncNow(){
   $('sync').textContent='Live Google Sheets · '+new Date().toLocaleTimeString();
   $('updated').textContent='Last live spreadsheet sync: '+new Date().toLocaleString();
   button.textContent='✓ Synced';
+  syncProgressHideTimer=setTimeout(()=>{panel.hidden=true},4000);
  }catch(error){
   stage.textContent='Sync failed';detail.textContent=String(error.message||error)+' · Existing collection retained';
   button.textContent='✕ Sync failed';
