@@ -32,7 +32,7 @@ for(const prefix of ['', 'overview-']){
 }
 document.addEventListener('click',event=>{if(!event.target.closest('.franchise-multi'))closeFranchiseMenu()});
 document.addEventListener('keydown',event=>{if(event.key==='Escape')closeFranchiseMenu()});
-function render(){renderRecentPurchases();if(!source)return;const filtered=groups(),sum=k=>filtered.reduce((v,x)=>v+(Number(x[k])||0),0),cost=sum('cost'),value=sum('value'),gain=value-cost,roi=cost?100*gain/cost:0;
+function render(){renderRecentPurchases();renderRecentImports();if(!source)return;const filtered=groups(),sum=k=>filtered.reduce((v,x)=>v+(Number(x[k])||0),0),cost=sum('cost'),value=sum('value'),gain=value-cost,roi=cost?100*gain/cost:0;
 $('market').textContent=currency(value);$('cost').textContent=currency(cost);$('gain').textContent=signed(gain);$('roi').textContent=(roi>=0?'+':'')+roi.toFixed(1)+'%';$('count').textContent=sum('count')+' Pops in selection';
 for(const id of ['gain','roi']){$(id).classList.toggle('positive',gain>=0);$(id).classList.toggle('negative',gain<0)}
 const parts=gain>=0?[{value:cost,color:'#64748b'},{value:gain,color:'#65e0b1'}]:[{value:value,color:'#64748b'},{value:-gain,color:'#f87171'}],total=parts.reduce((a,x)=>a+x.value,0);
@@ -65,7 +65,7 @@ async function syncNow(){
  meter.value=5;pct.textContent='5%';stage.textContent='Fetching live spreadsheet';detail.textContent='Reading Google Sheets directly';
  try{
   const result=await window.PopFolioLive.fetchAll((done,total)=>{meter.value=Math.round(5+90*done/total);pct.textContent=meter.value+'%'});
-  source=result.portfolio;inventory=result.items;wishlist=result.wishlist;updateFranchiseDropdown();
+  source=result.portfolio;inventory=result.items;wishlist=result.wishlist;recordImports(inventory);updateFranchiseDropdown();
   const names=[...new Set(inventory.map(p=>p.franchise))].sort();
   $('pop-franchise').innerHTML='<option value="all">Every franchise</option>'+names.map(n=>'<option value="'+escape(n)+'">'+escape(n)+'</option>').join('');
   render();drawPops();renderFeatures();renderRecentPurchases();
@@ -85,6 +85,29 @@ async function syncNow(){
  }
 }
 function parseCsv(input){const rows=[];let row=[],cell='',quoted=false;for(let i=0;i<input.length;i++){const c=input[i];if(c==='"'){if(quoted&&input[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(c===','&&!quoted){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&input[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell=''}else cell+=c}if(cell||row.length){row.push(cell);rows.push(row)}return rows}
+const importStoreKey='popfolio-import-tracker-v1';
+let importTracker={seen:null,recent:[]};
+try{const saved=JSON.parse(localStorage.getItem(importStoreKey)||'null');if(saved&&Array.isArray(saved.seen)&&Array.isArray(saved.recent))importTracker=saved}catch(e){console.warn('Import history storage unavailable',e)}
+function importIdentity(p){return [p.franchise,p.name,p.number,p.variant,p.date,p.platform,p.cost].map(x=>String(x??'').trim().toLowerCase()).join('|')}
+function recordImports(list){
+ const current=new Set(list.map(importIdentity));
+ if(importTracker.seen===null){importTracker.seen=[...current]}
+ else{
+  const prior=new Set(importTracker.seen);
+  const now=new Date().toISOString();
+  const additions=list.filter(p=>!prior.has(importIdentity(p)));
+  for(const p of additions){const key=importIdentity(p);if(!importTracker.recent.some(x=>x.key===key))importTracker.recent.unshift({key,importedAt:now,pop:p})}
+  importTracker.recent=importTracker.recent.slice(0,50);
+  importTracker.seen=[...current];
+ }
+ try{localStorage.setItem(importStoreKey,JSON.stringify(importTracker))}catch(e){console.warn('Import history could not be saved',e)}
+ renderRecentImports();
+}
+function renderRecentImports(){
+ const target=$('recent-imports-list');if(!target)return;
+ const rows=importTracker.recent.filter(x=>selectedFranchises.size===0||selectedFranchises.has(x.pop.franchise)).slice(0,5);
+ target.innerHTML=rows.map(({pop:p,importedAt})=>'<article class="recent-pop"><div class="recent-pop-image">'+(p.image?'<img loading="lazy" src="'+escape(p.image)+'" alt="">':'◈')+'</div><div class="recent-pop-info"><strong>'+escape(p.name)+'</strong><span>'+escape(p.franchise)+' · #'+escape(p.number||'Not recorded')+'</span><span>'+escape(p.variant||'Standard')+'</span><span>Detected '+escape(new Date(importedAt).toLocaleString())+'</span></div><div class="recent-pop-values"><span><small>All-in cost</small>'+(p.cost==null?'—':currency(p.cost))+'</span><span><small>Market value</small>'+(p.marketValue==null?'Not recorded':currency(p.marketValue))+'</span></div></article>').join('')||'<p class="muted">'+(importTracker.seen===null?'Sync to establish an initial inventory baseline.':'No new imports detected yet. New entries will appear after a subsequent sync on this device.')+'</p>';
+}
 function purchaseTimestamp(value){
  const raw=String(value||'').trim();if(!raw)return null;
  const iso=raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ]|$)/);
@@ -105,7 +128,7 @@ function renderRecentPurchases(){
  target.innerHTML=recent.map(p=>'<article class="recent-pop"><div class="recent-pop-image">'+(p.image?'<img loading="lazy" src="'+escape(p.image)+'" alt="" onerror="this.replaceWith(document.createTextNode(\'◈\'))">':'◈')+'</div><div class="recent-pop-info"><strong>'+escape(p.name)+'</strong><span>'+escape(p.franchise)+' · #'+escape(p.number||'—')+'</span><span>'+escape(p.variant||'Standard')+'</span><span>'+escape(p.platform||'Retailer not recorded')+' · '+escape(p.date)+'</span></div><div class="recent-pop-values"><span><small>All-in cost</small>'+(p.cost===null||p.cost===undefined?'—':currency(p.cost))+'</span><span><small>Market value</small>'+(p.marketValue===null||p.marketValue===undefined?'—':currency(p.marketValue))+'</span></div></article>').join('')||'<p class="muted">No purchases with recognizable dates for the selected franchises. Try Sync to load the latest spreadsheet.</p>';
 }
 function drawPops(){const q=$('pop-search').value.toLowerCase(),filter=$('pop-filter').value,franchise=$('pop-franchise').value;const counts=new Map();for(const p of inventory){const key=(p.franchise+'|'+p.name+'|'+p.number+'|'+p.variant).toLowerCase();counts.set(key,(counts.get(key)||0)+1)}const matched=inventory.filter(p=>{const key=(p.franchise+'|'+p.name+'|'+p.number+'|'+p.variant).toLowerCase();return (franchise==='all'||p.franchise===franchise)&&[p.name,p.number,p.variant,p.franchise].join(' ').toLowerCase().includes(q)&&(filter==='all'||filter==='duplicates'&&counts.get(key)>1||filter==='missing'&&p.marketValue===null||filter==='exclusive'&&/exclusive|limited|le [0-9]|fundays/i.test(p.variant)||filter==='sticker'&&/sticker|chase|convention|comic.con|exclusive/i.test(p.variant))});$('item-count').textContent=matched.length+' Pops';$('pop-results').innerHTML=matched.slice(0,120).map(p=>'<article class="pop-card" data-pop-id="'+escape(p.id)+'" tabindex="0" role="button" aria-label="View details for '+escape(p.name)+'"><div class="pop-image">'+(p.image?'<img loading="lazy" alt="" src="'+escape(p.image)+'" onerror="this.replaceWith(document.createTextNode(\'◈\'))">':'◈')+'</div><div class="pop-details"><strong>'+escape(p.name)+'</strong><small>'+escape(p.franchise)+' · #'+escape(p.number||'—')+'</small><small>'+escape(p.variant||'Standard')+'</small><small class="pop-retailer">Purchased from: '+escape(p.platform||'Not recorded')+'</small><div class="pop-money"><span>Cost: '+(p.cost===null?'—':currency(p.cost))+'</span><span>Value: '+(p.marketValue===null?'—':currency(p.marketValue))+'</span></div><a class="image-lookup" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?tbm=isch&q='+encodeURIComponent('Funko Pop '+p.name+' '+p.number+' '+p.variant)+'">Find photo ↗</a></div></article>').join('')||'<div class="muted">No matching Pops found.</div>';if(matched.length>120)$('item-count').textContent+=' (first 120 shown)'}
-async function loadPops(){try{const res=await fetch('./data/pops.json?cache='+Date.now(),{cache:'no-store'});if(res.ok){const data=await res.json();inventory=Array.isArray(data.items)?data.items:[]}else{const chunks=await Promise.all([1,2,3].map(async n=>{const response=await fetch('./data/pops-'+n+'.json',{cache:'no-store'});if(!response.ok)throw Error('Inventory chunk '+n+' unavailable');return (await response.json()).items}));inventory=chunks.flat()}const names=[...new Set(inventory.map(p=>p.franchise))].sort();$('pop-franchise').innerHTML='<option value="all">Every franchise</option>'+names.map(n=>'<option value="'+escape(n)+'">'+escape(n)+'</option>').join('');drawPops();renderFeatures();renderRecentPurchases()}catch(e){$('pop-results').innerHTML='<div class="muted">Individual Pop data is not yet available. Franchise dashboard remains usable.</div>'}}
+async function loadPops(){try{const res=await fetch('./data/pops.json?cache='+Date.now(),{cache:'no-store'});if(res.ok){const data=await res.json();inventory=Array.isArray(data.items)?data.items:[]}else{const chunks=await Promise.all([1,2,3].map(async n=>{const response=await fetch('./data/pops-'+n+'.json',{cache:'no-store'});if(!response.ok)throw Error('Inventory chunk '+n+' unavailable');return (await response.json()).items}));inventory=chunks.flat()}const names=[...new Set(inventory.map(p=>p.franchise))].sort();$('pop-franchise').innerHTML='<option value="all">Every franchise</option>'+names.map(n=>'<option value="'+escape(n)+'">'+escape(n)+'</option>').join('');drawPops();renderFeatures();renderRecentPurchases();renderRecentImports()}catch(e){$('pop-results').innerHTML='<div class="muted">Individual Pop data is not yet available. Franchise dashboard remains usable.</div>'}}
 $('pop-clear').addEventListener('click',()=>{$('pop-search').value='';drawPops();$('pop-search').focus()});$('sync-now').addEventListener('click',syncNow);for(const id of ['pop-search','pop-filter','pop-franchise'])$(id).addEventListener(id==='pop-search'?'input':'change',drawPops);
 
 let activeView='gallery',wishlist=[],galleryQuery='',retailerFilter='all',galleryPage=0,galleryRetailer='all',gallerySort='name',galleryMin='',galleryMax='';
