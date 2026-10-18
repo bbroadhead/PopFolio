@@ -1,0 +1,27 @@
+name: Audit Funko catalog matches
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compare collection with GitHub catalog
+        run: python scripts/catalog_audit.py
+      - name: Upload matching report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pop-catalog-audit
+          path: |
+            image-review/catalog-audit.json
+            image-review/catalog-audit.md
+          retention-days: 30
