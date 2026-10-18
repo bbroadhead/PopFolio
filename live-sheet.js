@@ -1,9 +1,27 @@
 (()=>{'use strict';
 const sheet='1Bltl_J8zQUjkhhvS-nWtfh4KzrTIMoVBt_umQlMab8I';
 const tabs=["Back to the Future","Cyberpunk 2077","DC Comics","Dexter","Diablo","Disney","Dungeons & Dragons","Elf","Elder Scrolls, The","Funko","God of War","Good Place, The","Game of Thrones","Halloween","Harry Potter","Horror: Miscellaneous","House of the Dragon","Hunger Games, The","IT (1990)","IT: Chapter One","IT: Chapter Two","IT: Welcome to Derry","Jurassic Park","Knight of the Seven Kingdoms, A","Lord of the Rings, The","Mandalorian, The","Marvel","Miscellaneous","Monty Python and the Holy Grail","Myths","Outlander","Overwatch","Parks and Recreation","Pokémon","Sonic the Hedgehog","Squid Game","Star Wars","Stranger Things","Vampire Diaries, The","World of Warcraft","Willy Wonka","Witcher 3: Wild Hunt, The","Witcher (Netflix), The","USAF"];
+const sheetGids={"Dashboard":1695208779,"Back to the Future":485102494,"Cyberpunk 2077":1310617453,"DC Comics":374605221,"Dexter":1366434587,"Diablo":1895486023,"Disney":66439918,"Dungeons & Dragons":355456082,"Elf":1067680104,"Elder Scrolls, The":1505055688,"Funko":1596280228,"God of War":590242127,"Good Place, The":386460720,"Game of Thrones":1811328803,"Halloween":1300422317,"Harry Potter":1233166844,"Horror: Miscellaneous":141200484,"House of the Dragon":96563991,"Hunger Games, The":1034673412,"IT (1990)":764862115,"IT: Chapter One":965171171,"IT: Chapter Two":1578071777,"IT: Welcome to Derry":1178628852,"Jurassic Park":834033639,"Knight of the Seven Kingdoms, A":1927960626,"Lord of the Rings, The":1578406865,"Mandalorian, The":1434325190,"Marvel":1009144772,"Miscellaneous":199858629,"Monty Python and the Holy Grail":438781456,"Myths":1458966824,"Outlander":158962482,"Overwatch":22791012,"Parks and Recreation":1914975756,"Pokémon":1472037690,"Sonic the Hedgehog":437857923,"Squid Game":1211192767,"Stranger Things":650226239,"Vampire Diaries, The":1252891,"World of Warcraft":1255529491,"Willy Wonka":96375151,"Witcher 3: Wild Hunt, The":182968141,"Witcher (Netflix), The":1008229555,"USAF":2078579711,"Wishlist":1680017429,"Star Wars":1770653340};
 function csv(s){let rows=[],row=[],cell='',q=false;for(let i=0;i<s.length;i++){const c=s[i];if(c==='"'){if(q&&s[i+1]==='"'){cell+='"';i++}else q=!q}else if(c===','&&!q){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&s[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell=''}else cell+=c}if(cell||row.length){row.push(cell);rows.push(row)}return rows}
 function num(x){const t=String(x??'').trim().replace(/[$,%]/g,'').replace(/,/g,'');if(!t)return null;const v=Number(t.replace(/^\((.*)\)$/,'-$1'));return Number.isFinite(v)?v:null}
-async function read(tab){const url='https://docs.google.com/spreadsheets/d/'+sheet+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(tab)+'&t='+Date.now();const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error(tab+': HTTP '+r.status);const rows=csv(await r.text());if(!rows.length)throw Error(tab+': empty');return rows}
+async function read(tab){
+ const base='https://docs.google.com/spreadsheets/d/'+sheet+'/';
+ const exportUrl=base+'export?format=csv&gid='+sheetGids[tab]+'&t='+Date.now();
+ const gvizUrl=base+'gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(tab)+'&t='+Date.now();
+ let error;
+ for(const url of [exportUrl,gvizUrl]){
+  try{
+   const response=await fetch(url,{cache:'no-store'});
+   if(!response.ok)throw Error('HTTP '+response.status);
+   const body=await response.text();
+   if(/^\s*<!doctype html|^\s*<html/i.test(body))throw Error('HTML returned instead of CSV');
+   const rows=csv(body);
+   if(!rows.length||!rows[0].some(x=>String(x).trim().toLowerCase()==='name'))throw Error('Invalid CSV header');
+   return rows;
+  }catch(e){error=e;console.warn('Spreadsheet CSV endpoint failed',tab,e)}
+ }
+ throw Error(tab+': '+(error?.message||'CSV unavailable'));
+}
 function items(tab,rows){
  const h=rows[0].map(x=>String(x||'').toLowerCase().trim().replace(/^\ufeff/,''));
  const idx=(name,fallback)=>{const i=h.indexOf(name.toLowerCase());return i<0?fallback:i};
