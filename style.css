@@ -77,3 +77,14 @@
 .pop-search-row .pop-clear{min-height:46px;flex:none;white-space:nowrap}
 .pop-filter-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media(max-width:650px){.hero-actions{width:100%;justify-content:stretch}.hero-actions .sheetlink,.hero-actions .sync-button{flex:1;min-width:0;font-size:13px;padding:11px 9px}.pop-filter-row{gap:9px}.pop-search-row{gap:8px}.pop-search-row .pop-clear{padding:10px;font-size:12px}.pop-field input,.pop-field select{font-size:13px;padding:10px 9px}.pop-field>span{font-size:10px}}
+
+
+/* Collection sub-navigation */
+.collection-subtabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:18px 0 22px;padding:5px;border:1px solid #34425c;border-radius:14px;background:#141d2f}
+.collection-subtab{min-width:0;padding:12px 9px;border:0;border-radius:10px;background:transparent;color:#aebbd3;font-size:13px;font-weight:700;cursor:pointer}
+.collection-subtab.active{background:#6954b8;color:white}
+.collection-subview[hidden]{display:none!important}
+.overview-intro{margin:18px 0;padding:20px}.overview-intro h2{margin:0 0 8px}.overview-intro p{margin:0}
+#collection-franchises .franchise-controls{margin-bottom:18px}
+#collection-pops .item-tools{margin-top:0}
+@media(max-width:560px){.collection-subtabs{gap:4px;padding:4px}.collection-subtab{font-size:11px;padding:12px 4px;line-height:1.25}.overview-intro{padding:15px}}
