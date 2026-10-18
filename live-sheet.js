@@ -16,7 +16,15 @@ async function read(tab){
    const body=await response.text();
    if(/^\s*<!doctype html|^\s*<html/i.test(body))throw Error('HTML returned instead of CSV');
    const rows=csv(body);
-   if(!rows.length||!rows[0].some(x=>String(x).trim().toLowerCase()==='name'))throw Error('Invalid CSV header');
+   if(!rows.length)throw Error('Empty CSV');
+   const first=rows[0].map(x=>String(x||'').trim().toLowerCase().replace(/^\\ufeff/,''));
+   if(tab==='Dashboard'){
+    if(!rows.some(r=>String(r[0]||'').trim().toUpperCase()==='FRANCHISE'))throw Error('Dashboard summary header missing');
+   }else if(tab==='Wishlist'){
+    if(!rows.some(r=>r.some(x=>String(x||'').trim())))throw Error('Wishlist CSV empty');
+   }else if(!first.includes('name')){
+    throw Error('Collection CSV Name header missing');
+   }
    return rows;
   }catch(e){error=e;console.warn('Spreadsheet CSV endpoint failed',tab,e)}
  }
