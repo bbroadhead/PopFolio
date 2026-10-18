@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       max_lookups:
-        description: 'Number of unique Pops to search (0-100)'
+        description: 'Number of Pops across different franchises to test'
         required: true
-        default: '40'
+        default: '25'
         type: choice
         options: ['10', '25', '40', '75', '100']
 
@@ -26,10 +26,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Find reusable image candidates
+      - name: Find hobbyDB catalog and image candidates
         env:
           MAX_LOOKUPS: ${{ inputs.max_lookups }}
-        run: python scripts/image_review.py
+        run: python scripts/hobbydb_review.py
       - name: Upload review report
         uses: actions/upload-artifact@v4
         with:
