@@ -4,7 +4,11 @@ on:
     branches: [main]
     paths:
       - 'assets/pop_images/**'
+      - 'assets/stickers/**'
       - '!assets/pop_images/index.json'
+      - '!assets/stickers/index.json'
+      - '!assets/stickers/overrides.json'
+      - '!assets/stickers/README.md'
   workflow_dispatch:
 
 permissions:
@@ -25,9 +29,12 @@ jobs:
           folder = Path("assets/pop_images")
           images = sorted(p.name for p in folder.iterdir() if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".gif"})
           (folder / "index.json").write_text(json.dumps(images, indent=2) + "\n", encoding="utf-8")
+          sticker_folder = Path("assets/stickers")
+          stickers = sorted(p.name for p in sticker_folder.iterdir() if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".svg"})
+          (sticker_folder / "index.json").write_text(json.dumps(stickers, indent=2) + "\n", encoding="utf-8")
       - name: Commit index if changed
         run: |
-          git add assets/pop_images/index.json
+          git add assets/pop_images/index.json assets/stickers/index.json
           if ! git diff --cached --quiet; then
             git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Update Pop image index"
             git push
