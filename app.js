@@ -14,7 +14,7 @@ const normalizedPopName=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' '
 function applyLocalPopImages(items){
  for(const p of items){
   const name=normalizedPopName(p.name),number=String(p.number||'').trim();
-  const match=localPopImages.find(([file,label,num])=>num===number&&(name.includes(label)||label.includes(name))&&(!file.includes('Futura-Red')||/futura|red/i.test([p.name,p.variant].join(' '))));
+  const match=localPopImages.find(([file,label,num])=>num===number&&(name.includes(label)||label.includes(name)||label.split(' ').filter(w=>w.length>2).every(w=>name.includes(w))||label==='campaign eddie'&&name.includes('eddie')||label==='byers house will'&&name.includes('will')&&name.includes('byers'))&&(!file.includes('Futura-Red')||/futura|red/i.test([p.name,p.variant].join(' '))));
   if(match)p.image='./assets/pop_images/'+encodeURIComponent(match[0]);
  }
  return items;
