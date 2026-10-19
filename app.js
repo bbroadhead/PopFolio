@@ -8,12 +8,12 @@ const localPopImages=[
  {file:'Reinhardt-400.JPG',number:'400',name:/\breinhardt\b/i,franchise:/overwatch/i},
  {file:'Geralt-1321.JPG',number:'1321',name:/\bgeralt\b/i},
  {file:'Reinhardt-178.JPG',number:'178',name:/\breinhardt\b/i,franchise:/overwatch/i},
- {file:'Boba-Fett-297-Futura-Red.JPG',number:'297',name:/\bboba\s+fett\b/i,variant:/futura|red/i}
-,
+ {file:'Boba-Fett-297-Futura-Red.JPG',number:'297',name:/\bboba\s+fett\b/i,variant:/futura|red/i},
  {file:'Campaign-Eddie-1477.png',number:'1477',name:/\bcampaign\s+eddie\b/i,franchise:/stranger things/i},
  {file:'Geralt-1317.png',number:'1317',name:/\bgeralt\b/i},
  {file:'Steve-1542.png',number:'1542',name:/\bsteve\b/i,franchise:/stranger things/i},
- {file:'Boba-Fett-and-Fennec-on-Throne-486.png',number:'486',name:/\bboba\b.*\bfennec\b|\bfennec\b.*\bboba\b/i,franchise:/star wars|mandalorian|book of boba/i},];
+ {file:'Boba-Fett-and-Fennec-on-Throne-486.png',number:'486',name:/\bboba\b.*\bfennec\b|\bfennec\b.*\bboba\b/i,franchise:/star wars|mandalorian|book of boba/i}
+];
 function applyLocalPopImages(items){
  for(const p of items){
   const number=String(p.number||'').trim();
