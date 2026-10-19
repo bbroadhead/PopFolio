@@ -192,3 +192,19 @@
 /* Preserve the intentionally unboxed Pop Explorer heading. */
 #collection-pops .item-tools{background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 @media(prefers-reduced-motion:reduce){:is(.gallery-card,.pop-card,.feature-card,.sales-item,.recent-pop){transition:none}}
+
+/* Crystal glass refinement: more light transmission, luminous edges and depth. */
+:root{
+ --glass-fill:linear-gradient(125deg,rgba(210,226,255,.115) 0%,rgba(113,139,205,.075) 36%,rgba(34,46,81,.13) 100%);
+ --glass-stroke:rgba(223,234,255,.34);
+ --glass-shadow:0 16px 44px rgba(2,6,20,.22),0 1px 0 rgba(255,255,255,.12),inset 0 1px 0 rgba(255,255,255,.24),inset 1px 0 0 rgba(255,255,255,.075),inset 0 -1px 0 rgba(140,170,235,.10);
+}
+:is(.kpi,.panel,.feature-panel,.gallery-card,.pop-card,.sales-panel,.sales-kpis article,.sales-item,.recent-pop,.feature-card,.insight,.insight-kpis>div,.insight-tiles>div,.detail-list>div,.pop-search-panel,.feature-photo,.recent-pop-image,.detail-image,.pop-dialog){
+ -webkit-backdrop-filter:blur(24px) saturate(165%) brightness(1.09);
+ backdrop-filter:blur(24px) saturate(165%) brightness(1.09);
+}
+:is(.gallery-card,.pop-card,.feature-card,.sales-item,.recent-pop):hover{
+ background:linear-gradient(125deg,rgba(210,226,255,.18),rgba(108,127,194,.11),rgba(32,43,77,.16))!important;
+ border-color:rgba(234,241,255,.55)!important;
+ box-shadow:0 18px 48px rgba(2,6,20,.28),inset 0 1px 0 rgba(255,255,255,.35),inset 1px 0 0 rgba(255,255,255,.12);
+}
