@@ -35,10 +35,10 @@ async function read(tab){
 function items(tab,rows){
  const h=rows[0].map(x=>String(x||'').toLowerCase().trim().replace(/^\ufeff/,''));
  const idx=(name,fallback)=>{const i=h.indexOf(name.toLowerCase());return i<0?fallback:i};
- const c={name:idx('Name',2),number:idx('Pop #',3),variant:idx('Variant / Exclusive',4),platform:idx('Purchased From',6),date:idx('Purchase Date',7),item:idx('Item Price',9),cost:idx('All-in Price',10),market:idx('Current Market Value',11),sold:idx('Sold for',14),profit:idx('Net Profit',15)};
+ const c={name:idx('Name',2),number:idx('Pop #',3),variant:idx('Variant / Exclusive',4),platform:idx('Purchased From',6),date:idx('Purchase Date',7),item:idx('Item Price',9),cost:idx('All-in Price',10),market:idx('Current Market Value',11),sold:idx('Sold for',17),profit:idx('Net Profit',18),saleId:idx('Sales ID',22)};
  const val=(r,k)=>String(r[c[k]]??'').trim();
  return rows.slice(1).flatMap((r,i)=>{const name=val(r,'name');if(!name||/^total\b/i.test(name))return [];
- return [{id:tab+':'+(i+2),franchise:tab,name,number:val(r,'number'),variant:val(r,'variant'),platform:val(r,'platform'),date:val(r,'date'),itemPrice:num(val(r,'item')),cost:num(val(r,'cost')),marketValue:num(val(r,'market')),sold:num(val(r,'sold')),netProfit:num(val(r,'profit')),image:null}]});
+ return [{id:tab+':'+(i+2),franchise:tab,name,number:val(r,'number'),variant:val(r,'variant'),platform:val(r,'platform'),date:val(r,'date'),itemPrice:num(val(r,'item')),cost:num(val(r,'cost')),marketValue:num(val(r,'market')),sold:num(val(r,'sold')),netProfit:num(val(r,'profit')),saleId:val(r,'saleId'),image:null}]});
 }
 function repairKnownNumbers(list){
  const known=[
