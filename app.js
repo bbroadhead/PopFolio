@@ -82,6 +82,29 @@ function applyLocalPopImages(items){
  }
  return items;
 }
+// A successful uploader save can update the current view before the index workflow runs.
+function registerUploadedPopImage(detail){
+ const file=String(detail?.file||'');
+ if(!/^[^/\\\\]+\.(?:png|jpe?g|webp|gif)$/i.test(file))return;
+ if(!discoveredPopImages.includes(file))discoveredPopImages.push(file);
+ const popId=String(detail.id||'');
+ const url='./assets/pop_images/'+encodeURIComponent(file)+'?uploaded='+Date.now();
+ let matched=0;
+ for(const p of inventory){
+  if(String(p.id)===popId){
+   p.image=url;
+   matched++;
+  }
+ }
+ if(!matched)return;
+ if(lastSyncCache&&Array.isArray(lastSyncCache.items)){
+  for(const p of lastSyncCache.items)if(String(p.id)===popId)p.image=url;
+  try{localStorage.setItem(lastSyncCacheKey,JSON.stringify(lastSyncCache))}catch(error){console.warn('Could not cache uploaded image',error)}
+ }
+ drawPops();renderFeatures();renderRecentPurchases();renderRecentImports();
+ window.dispatchEvent(new CustomEvent('popfolio-data-updated',{detail:{items:inventory,source:'Image uploaded'}}));
+}
+window.addEventListener('popfolio-image-uploaded',event=>registerUploadedPopImage(event.detail));
 let selectedFranchises=new Set();
 function groups(){if(!source)return[];return source.groups.filter(g=>selectedFranchises.size===0||selectedFranchises.has(g.name))}
 function updateFranchiseDropdown(){
