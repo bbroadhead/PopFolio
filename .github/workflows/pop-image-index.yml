@@ -17,25 +17,47 @@ permissions:
 jobs:
   index:
     runs-on: ubuntu-latest
+    concurrency:
+      group: popfolio-image-index-main
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: true
-      - name: Generate image filename index
-        shell: python
+      - name: Generate and publish image indices (retry concurrent pushes)
+        shell: bash
         run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5 6; do
+            # Always rebuild against the latest main, including images uploaded
+            # after this run started. Never force-push or discard concurrent work.
+            git fetch origin main
+            git checkout -B main origin/main
+            python3 - <<'PY'
           import json
           from pathlib import Path
-          folder = Path("assets/pop_images")
-          images = sorted(p.name for p in folder.iterdir() if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".gif"})
-          (folder / "index.json").write_text(json.dumps(images, indent=2) + "\n", encoding="utf-8")
-          sticker_folder = Path("assets/stickers")
-          stickers = sorted(p.name for p in sticker_folder.iterdir() if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".svg"})
-          (sticker_folder / "index.json").write_text(json.dumps(stickers, indent=2) + "\n", encoding="utf-8")
-      - name: Commit index if changed
-        run: |
-          git add assets/pop_images/index.json assets/stickers/index.json
-          if ! git diff --cached --quiet; then
-            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Update Pop image index"
-            git push
-          fi
+          for directory, extensions in [
+              ("assets/pop_images", {".png", ".jpg", ".jpeg", ".webp", ".gif"}),
+              ("assets/stickers", {".png", ".jpg", ".jpeg", ".webp", ".svg"}),
+          ]:
+              folder = Path(directory)
+              images = sorted(p.name for p in folder.iterdir() if p.is_file() and p.suffix.lower() in extensions)
+              (folder / "index.json").write_text(json.dumps(images, indent=2) + "\\n", encoding="utf-8")
+          PY
+            git add assets/pop_images/index.json assets/stickers/index.json
+            if git diff --cached --quiet; then
+              echo "Image indices already current."
+              exit 0
+            fi
+            git commit -m "Update Pop image indices"
+            if git push origin HEAD:main; then
+              echo "Image indices published."
+              exit 0
+            fi
+            echo "main advanced during push; retrying with the latest files (attempt $attempt/6)."
+            sleep 2
+          done
+          echo "::error::Could not publish image indices after six retries."
+          exit 1
