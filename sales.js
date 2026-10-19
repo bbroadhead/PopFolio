@@ -12,7 +12,7 @@ const estimatePlatforms={ebay:{label:'eBay',rate:13.6,fixed:.40,shipping:15,note
 function estimateSelectPlatform(key){estimatePlatform=key;const p=estimatePlatforms[key];estimateFee=p.rate;estimateFixed=p.fixed;estimateShipping=p.shipping;estimateBuyerShipping=0;estimateAds=0;}
 function estimateMount(){
  const root=$('sales-content');if(!root)return;
- const panel=document.createElement('details');panel.className='sales-panel';panel.id='sales-estimator';panel.innerHTML='<summary style="cursor:pointer;font-weight:700;font-size:1.15rem;padding:4px 0">Marketplace Sales Estimator <span class="muted" style="font-size:.85rem;font-weight:400">— expand to calculate potential profit</span></summary><div id="sales-estimator-body"></div>';
+ const panel=document.createElement('details');panel.className='sales-panel';panel.id='sales-estimator';panel.style.marginBottom='20px';panel.innerHTML='<summary style="cursor:pointer;font-weight:700;font-size:1.15rem;padding:4px 0">Marketplace Sales Estimator <span class="muted" style="font-size:.85rem;font-weight:400">— expand to calculate potential profit</span></summary><div id="sales-estimator-body"></div>';
  root.insertBefore(panel,root.firstChild);
  function redraw(){
   const chosen=estimateIds.map(id=>all.find(p=>String(p.id)===id)).filter(Boolean);
