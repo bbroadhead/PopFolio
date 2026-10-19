@@ -14,16 +14,43 @@ function populate(){
  if(state.pops.some(p=>String(p.id)===current))select.value=current;
 }
 function setPops(pops){state.pops=Array.isArray(pops)?pops:[];populate()}
-function preview(url,source,description){
+function imageLoads(url){
+ return new Promise(resolve=>{
+  const img=new Image();let finished=false;
+  const done=ok=>{if(!finished){finished=true;clearTimeout(timer);resolve(ok)}};
+  const timer=setTimeout(()=>done(false),6500);
+  img.onload=()=>done(img.naturalWidth>0);
+  img.onerror=()=>done(false);
+  img.referrerPolicy='no-referrer';
+  img.src=url;
+ });
+}
+function wikiRedirect(title){
+ return 'https://funko.fandom.com/wiki/Special:Redirect/file/'+encodeURIComponent(title.replace(/^File:/,'').replace(/ /g,'_'));
+}
+async function resolveCandidate(x){
+ const urls=[x.thumb,x.url,x.fileTitle?wikiRedirect(x.fileTitle):null].filter(Boolean);
+ for(const url of [...new Set(urls)])if(await imageLoads(url))return {...x,thumb:url,workingUrl:url};
+ return null;
+}
+async function preview(url,source,description){
+ $('finder-preview').hidden=true;
+ $('finder-selected').textContent='Checking selected image…';
+ if(!await imageLoads(url)){
+  state.image=null;
+  $('finder-selected').textContent='Image unavailable: '+description;
+  setStatus('This image URL does not load. The source may have removed or blocked the image. Choose another candidate or upload a downloaded file.',true);
+  return;
+ }
  state.image={url,source,description};
  $('finder-preview').src=url;
  $('finder-preview').hidden=false;
  $('finder-selected').textContent='Selected: '+description;
- setStatus('Review the exact Pop and image rights before saving.');
+ setStatus('Image preview loaded. Note: a preview does not guarantee that the source permits browser downloads.');
 }
 function showCandidates(items){
  state.candidates=items;
- $('finder-results').innerHTML=items.length?items.map((x,i)=>'<button type="button" class="finder-candidate" data-candidate="'+i+'"><img loading="lazy" src="'+esc(x.thumb||x.url)+'" alt="'+esc(x.title)+'"><span>'+esc(x.title)+'</span><small>'+esc(x.source)+'</small></button>').join(''):'<p>No previewable candidates found. Use the source links or paste an image URL below.</p>';
+ $('finder-results').innerHTML=items.length?items.map((x,i)=>'<button type="button" class="finder-candidate" data-candidate="'+i+'"><img loading="lazy" referrerpolicy="no-referrer" src="'+esc(x.thumb||x.url)+'" alt="'+esc(x.title)+'"><span>'+esc(x.title)+'</span><small>'+esc(x.source)+'</small></button>').join(''):'<p>No working image previews found. Use the source links or upload an image file.</p>';
 }
 async function wikiQuery(params){
  const query=new URLSearchParams({action:'query',format:'json',origin:'*',...params});
@@ -36,7 +63,7 @@ async function wikiQuery(params){
 function wikiCandidates(pages){
  return Object.values(pages||{}).flatMap(page=>(page.imageinfo||[])
   .filter(info=>/^image\/(png|jpeg|webp)$/i.test(info.mime||''))
-  .map(info=>({title:page.title.replace(/^File:/,''),url:info.url,thumb:info.thumburl||info.url,source:'Funko Wiki',descriptionUrl:info.descriptionurl,license:info.extmetadata?.LicenseShortName?.value||''})));
+  .map(info=>({title:page.title.replace(/^File:/,''),fileTitle:page.title,url:info.url,thumb:info.thumburl||info.url,source:'Funko Wiki',descriptionUrl:info.descriptionurl,license:info.extmetadata?.LicenseShortName?.value||''})));
 }
 async function fandomSearch(p){
  // Wiki articles live in namespace 0; searching only namespace 6 (files)
@@ -73,7 +100,7 @@ async function search(){
  const p=selectedPop();if(!p){setStatus('Select a Pop first.',true);return}
  state.image=null;$('finder-preview').hidden=true;$('finder-selected').textContent='';searchLinks(p);
  setStatus('Searching Funko Wiki pages and image records…');
- try{const items=await fandomSearch(p);showCandidates(items);setStatus(items.length?items.length+' candidates found. Check the number and variant carefully.':'No wiki images found for this Pop. Try the source links or select a local image.')}
+ try{const items=await fandomSearch(p);setStatus('Checking '+items.length+' candidate image URLs…');const verified=(await Promise.all(items.slice(0,24).map(resolveCandidate))).filter(Boolean);showCandidates(verified);setStatus(verified.length?verified.length+' images passed preview checks. Verify the exact Pop and variant before saving.':'The Wiki returned results, but none of their image URLs loaded. Try the source links or upload a local image.',!verified.length)}
  catch(e){showCandidates([]);setStatus('Automatic wiki lookup unavailable ('+e.message+'). Use the source search links, then paste an image URL or upload a permitted image.',true)}
 }
 async function readFile(file){
@@ -114,7 +141,7 @@ async function save(){
   if(!blob){
    if(!/^https:\/\//i.test(url))throw Error('Use a secure HTTPS image URL.');
    const response=await fetch(url,{mode:'cors',signal:AbortSignal.timeout(15000)});
-   if(!response.ok)throw Error('Image download failed: HTTP '+response.status);
+   if(!response.ok)throw Error('Image source returned HTTP '+response.status+' even though it appeared in search results. This source may use expired or blocked image links. Download an authorized copy from its page and select the local file instead.');
    blob=await response.blob();
   }
   const png=await toPng(blob);
@@ -130,7 +157,7 @@ async function save(){
 function init(){
  const root=$('image-finder');if(!root)return;
  $('finder-search').addEventListener('click',search);
- $('finder-results').addEventListener('click',e=>{const b=e.target.closest('[data-candidate]');if(!b)return;const x=state.candidates[Number(b.dataset.candidate)];preview(x.url,x.source,x.title);$('finder-url').value=x.url;$('finder-file').value='';$('finder-source-credit').textContent='Source: '+x.source+(x.license?' · License information: '+x.license:' · Check usage rights on the source page');$('finder-source-credit').dataset.url=x.descriptionUrl||''});
+ $('finder-results').addEventListener('click',e=>{const b=e.target.closest('[data-candidate]');if(!b)return;const x=state.candidates[Number(b.dataset.candidate)];preview(x.workingUrl||x.url,x.source,x.title);$('finder-url').value=x.workingUrl||x.url;$('finder-file').value='';$('finder-source-credit').textContent='Source: '+x.source+(x.license?' · License information: '+x.license:' · Check usage rights on the source page');$('finder-source-credit').dataset.url=x.descriptionUrl||''});
  $('finder-url-preview').addEventListener('click',()=>{const url=$('finder-url').value.trim();if(!/^https:\/\//i.test(url))return setStatus('Enter a secure HTTPS image URL.',true);$('finder-file').value='';preview(url,'URL',url)});
  $('finder-file').addEventListener('change',()=>{const f=$('finder-file').files[0];if(!f)return;preview(URL.createObjectURL(f),'Local file',f.name)});
  $('finder-save').addEventListener('click',save);
