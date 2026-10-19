@@ -1,6 +1,34 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),currency=v=>(v<0?'−':'')+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),signed=v=>(v>=0?'+':'−')+currency(Math.abs(v)),escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let source=null,inventory=[];
+const lastSyncCacheKey='popfolio-last-successful-live-sync-v1';
+let lastSyncCache=null;
+try{
+ const cached=JSON.parse(localStorage.getItem(lastSyncCacheKey)||'null');
+ if(cached&&Array.isArray(cached.portfolio?.groups)&&Array.isArray(cached.items)&&cached.items.length&&typeof cached.syncedAt==='string')lastSyncCache=cached;
+}catch(error){console.warn('Last-sync cache unavailable',error)}
+function displayLastSyncCache(){
+ if(!lastSyncCache)return false;
+ source=lastSyncCache.portfolio;
+ inventory=applyLocalPopImages(lastSyncCache.items);
+ wishlist=Array.isArray(lastSyncCache.wishlist)?lastSyncCache.wishlist:[];
+ window.PopFolioImageFinder?.setPops(inventory);
+ updateFranchiseDropdown();
+ const names=[...new Set(inventory.map(p=>p.franchise))].sort();
+ $('pop-franchise').innerHTML='<option value="all">Every franchise</option>'+names.map(n=>'<option value="'+escape(n)+'">'+escape(n)+'</option>').join('');
+ render();drawPops();renderFeatures();renderRecentPurchases();renderRecentImports();renderNumberAudit();renderActualSales();
+ const stamp=new Date(lastSyncCache.syncedAt).toLocaleString();
+ $('sync').textContent='Last successful sync · '+stamp;
+ $('updated').textContent='Showing last successful live sync: '+stamp;
+ window.dispatchEvent(new CustomEvent('popfolio-data-updated',{detail:{items:inventory,source:'Last successful sync'}}));
+ return true;
+}
+function saveLastSyncCache(result){
+ const payload={version:1,syncedAt:new Date().toISOString(),portfolio:result.portfolio,items:result.items,wishlist:result.wishlist};
+ try{localStorage.setItem(lastSyncCacheKey,JSON.stringify(payload));lastSyncCache=payload}
+ catch(error){console.warn('Unable to store last successful sync locally',error)}
+}
+
 // Match local photos by collectible number and identity; do not guess across variants.
 const localPopImages=[
  {file:'Yennefer-1318.PNG',number:'1318',name:/\byennefer\b/i},
@@ -118,7 +146,7 @@ $('bars').innerHTML=top.map(x=>{const v=score(x),label=metric==='roi'?(v>=0?'+':
 const sorted=[...filtered].sort((a,b)=>b.value-a.value);
 $('matches').textContent=filtered.length+' franchises';$('rows').innerHTML=sorted.map(x=>{const pct=x.cost?x.gain/x.cost*100:0;return '<tr><td>'+escape(x.name)+'</td><td>'+x.count+'</td><td>'+currency(x.cost)+'</td><td>'+currency(x.value)+'</td><td class="'+(x.gain>=0?'positive':'negative')+'">'+signed(x.gain)+'</td><td class="'+(pct>=0?'positive':'negative')+'">'+(pct>=0?'+':'')+pct.toFixed(1)+'%</td></tr>'}).join('');
 }
-async function init(){try{const response=await fetch('./data/portfolio.json?nocache='+Date.now(),{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();if(!Array.isArray(data.groups)||!data.groups.length)throw Error('Empty data');source=data;updateFranchiseDropdown();const stamp=data.updatedAt?new Date(data.updatedAt):null;const date=stamp&&!isNaN(stamp.getTime())?stamp.toLocaleString():'Date unavailable';$('sync').textContent='Data snapshot · '+date;$('updated').textContent='Last successful data sync: '+date;render()}catch(error){$('sync').textContent='Data unavailable';$('updated').textContent='Could not load portfolio data: '+String(error.message||error)}}
+async function init(){try{if(lastSyncCache)return;const response=await fetch('./data/portfolio.json?nocache='+Date.now(),{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();if(!Array.isArray(data.groups)||!data.groups.length)throw Error('Empty data');source=data;updateFranchiseDropdown();const stamp=data.updatedAt?new Date(data.updatedAt):null;const date=stamp&&!isNaN(stamp.getTime())?stamp.toLocaleString():'Date unavailable';$('sync').textContent='Data snapshot · '+date;$('updated').textContent='Last successful data sync: '+date;render()}catch(error){$('sync').textContent='Data unavailable';$('updated').textContent='Could not load portfolio data: '+String(error.message||error)}}
 $('metric').addEventListener('change',render);
 for(const id of ['reset','overview-reset'])$(id).addEventListener('click',()=>{selectedFranchises.clear();updateFranchiseDropdown();closeFranchiseMenu();render()});
 document.querySelectorAll('[data-collection-tab]').forEach(button=>button.addEventListener('click',()=>{
@@ -142,6 +170,7 @@ async function syncNow(){
  meter.value=5;pct.textContent='5%';stage.textContent='Fetching live spreadsheet';detail.textContent='Reading Google Sheets directly';
  try{
   const result=await window.PopFolioLive.fetchAll((done,total)=>{meter.value=Math.round(5+90*done/total);pct.textContent=meter.value+'%'});
+  saveLastSyncCache(result);
   source=result.portfolio;inventory=applyLocalPopImages(result.items);window.PopFolioImageFinder?.setPops(inventory);wishlist=result.wishlist;recordImports(inventory);updateFranchiseDropdown();
   const names=[...new Set(inventory.map(p=>p.franchise))].sort();
   $('pop-franchise').innerHTML='<option value="all">Every franchise</option>'+names.map(n=>'<option value="'+escape(n)+'">'+escape(n)+'</option>').join('');
@@ -212,7 +241,7 @@ function renderRecentPurchases(){
  target.innerHTML=recent.map((p,i)=>'<article class="recent-pop" role="button" tabindex="0" data-recent-index="'+(typeof i==='number'?i:0)+'" aria-label="View details for '+escape(p.name)+'"><div class="recent-pop-image">'+(p.image?'<img loading="lazy" src="'+escape(p.image)+'" alt="" onerror="this.replaceWith(document.createTextNode(\'◈\'))">':'◈')+'</div><div class="recent-pop-info"><strong>'+escape(p.name)+'</strong><span>'+escape(p.franchise)+' · #'+escape(p.number||'—')+'</span><span>'+escape(p.variant||'Standard')+'</span><span>'+escape(p.platform||'Retailer not recorded')+' · '+escape(p.date)+'</span></div><div class="recent-pop-values"><span><small>All-in cost</small>'+(p.cost===null||p.cost===undefined?'—':currency(p.cost))+'</span><span><small>Market value</small>'+(p.marketValue===null||p.marketValue===undefined?'—':currency(p.marketValue))+'</span></div></article>').join('')||'<p class="muted">No purchases with recognizable dates for the selected franchises. Try Sync to load the latest spreadsheet.</p>';
 }
 function drawPops(){const q=$('pop-search').value.toLowerCase(),filter=$('pop-filter').value,franchise=$('pop-franchise').value;const counts=new Map();for(const p of inventory){const key=(p.franchise+'|'+p.name+'|'+p.number+'|'+p.variant).toLowerCase();counts.set(key,(counts.get(key)||0)+1)}const matched=inventory.filter(p=>{const key=(p.franchise+'|'+p.name+'|'+p.number+'|'+p.variant).toLowerCase();return (franchise==='all'||p.franchise===franchise)&&[p.name,p.number,p.variant,p.franchise].join(' ').toLowerCase().includes(q)&&(filter==='all'||filter==='duplicates'&&counts.get(key)>1||filter==='missing'&&p.marketValue===null||filter==='exclusive'&&/exclusive|limited|le [0-9]|fundays/i.test(p.variant)||filter==='sticker'&&/sticker|chase|convention|comic.con|exclusive/i.test(p.variant))});$('item-count').textContent=matched.length+' Pops';$('pop-results').innerHTML=matched.slice(0,120).map(p=>'<article class="pop-card" data-pop-id="'+escape(p.id)+'" tabindex="0" role="button" aria-label="View details for '+escape(p.name)+'"><div class="pop-image">'+(p.image?'<img loading="lazy" alt="" src="'+escape(p.image)+'" onerror="this.replaceWith(document.createTextNode(\'◈\'))">':'◈')+'</div><div class="pop-details">'+(window.PopFolioStickers?.html(p)||'')+'<strong>'+escape(p.name)+'</strong><small>'+escape(p.franchise)+' · #'+escape(p.number||'—')+'</small><small>'+escape(p.variant||'Standard')+'</small><small class="pop-retailer">Purchased from: '+escape(p.platform||'Not recorded')+'</small><div class="pop-money"><span>Cost: '+(p.cost===null?'—':currency(p.cost))+'</span><span>Value: '+(p.marketValue===null?'—':currency(p.marketValue))+'</span></div><a class="image-lookup" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?tbm=isch&q='+encodeURIComponent('Funko Pop '+p.name+' '+p.number+' '+p.variant)+'">Find photo ↗</a></div></article>').join('')||'<div class="muted">No matching Pops found.</div>';if(matched.length>120)$('item-count').textContent+=' (first 120 shown)'}
-async function loadPops(){await imageIndexReady;await window.PopFolioStickers?.ready;try{const res=await fetch('./data/pops.json?cache='+Date.now(),{cache:'no-store'});if(res.ok){const data=await res.json();inventory=Array.isArray(data.items)?applyLocalPopImages(data.items):[];window.PopFolioImageFinder?.setPops(inventory)}else{const chunks=await Promise.all([1,2,3].map(async n=>{const response=await fetch('./data/pops-'+n+'.json',{cache:'no-store'});if(!response.ok)throw Error('Inventory chunk '+n+' unavailable');return (await response.json()).items}));inventory=applyLocalPopImages(chunks.flat());window.PopFolioImageFinder?.setPops(inventory)}const names=[...new Set(inventory.map(p=>p.franchise))].sort();$('pop-franchise').innerHTML='<option value="all">Every franchise</option>'+names.map(n=>'<option value="'+escape(n)+'">'+escape(n)+'</option>').join('');drawPops();renderFeatures();renderRecentPurchases();renderRecentImports();renderNumberAudit();renderActualSales()}catch(e){$('pop-results').innerHTML='<div class="muted">Individual Pop data is not yet available. Franchise dashboard remains usable.</div>'}}
+async function loadPops(){await imageIndexReady;await window.PopFolioStickers?.ready;if(lastSyncCache){displayLastSyncCache();return}try{const res=await fetch('./data/pops.json?cache='+Date.now(),{cache:'no-store'});if(res.ok){const data=await res.json();inventory=Array.isArray(data.items)?applyLocalPopImages(data.items):[];window.PopFolioImageFinder?.setPops(inventory)}else{const chunks=await Promise.all([1,2,3].map(async n=>{const response=await fetch('./data/pops-'+n+'.json',{cache:'no-store'});if(!response.ok)throw Error('Inventory chunk '+n+' unavailable');return (await response.json()).items}));inventory=applyLocalPopImages(chunks.flat());window.PopFolioImageFinder?.setPops(inventory)}const names=[...new Set(inventory.map(p=>p.franchise))].sort();$('pop-franchise').innerHTML='<option value="all">Every franchise</option>'+names.map(n=>'<option value="'+escape(n)+'">'+escape(n)+'</option>').join('');drawPops();renderFeatures();renderRecentPurchases();renderRecentImports();renderNumberAudit();renderActualSales()}catch(e){$('pop-results').innerHTML='<div class="muted">Individual Pop data is not yet available. Franchise dashboard remains usable.</div>'}}
 $('pop-clear').addEventListener('click',event=>{event.preventDefault();$('pop-search').value='';$('pop-franchise').value='all';$('pop-filter').value='all';drawPops();$('pop-clear').blur()});$('sync-now').addEventListener('click',syncNow);for(const id of ['pop-search','pop-filter','pop-franchise'])$(id).addEventListener(id==='pop-search'?'input':'change',drawPops);
 
 let activeView='gallery',wishlist=[],galleryQuery='',retailerFilter='all',galleryPage=0,galleryRetailer='all',gallerySort='name',galleryMin='',galleryMax='';
