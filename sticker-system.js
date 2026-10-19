@@ -58,7 +58,9 @@ function get(p){
   const direct=available(label);if(direct)add(direct,label);
  }
  const lower=raw.toLowerCase();
- for(const [re,base] of aliasRules)if(re.test(lower))add(base,base.replace(/[_-]/g,' '));
+ const exclusiveHint=manual||source.length>0||/exclusive|shared\s+sticker|\bsticker\b/i.test(raw);
+ const retailerBases=new Set(['GameStop_Exclusive','Hot_Topic_Exclusive','Box_Lunch_Exclusive','Amazon_Exclusive','Target-Exclusive','Walmart-Exclusive','Best-Buy-Exclusive','F.Y.E._Exclusive','Entertainment_Earth_Exclusive','Barnes_and_Noble_Exclusive','BAM_Books-a-Million_Exclusive','Funko_Shop_Exclusive','PX_Previews_Exclusive','Walgreens_Exclusive','7-Eleven_Exclusive','Loot_Crate_Exclusive','Fugitive_Toys_Exclusive','Marvel_Collector_Corps_Exclusive']);
+ for(const [re,base] of aliasRules)if(re.test(lower)&&(!retailerBases.has(base)||exclusiveHint))add(base,base.replace(/[_-]/g,' '));
  // Combined stickers take precedence over their generic counterparts.
  if(/flocked\s+chase/i.test(raw))return list.filter(x=>!['Flocked','Chase'].includes(x.file.replace(/\.[^.]+$/,'')));
  if(/(?:glow\s+in\s+the\s+dark|gitd)\s+chase/i.test(raw))return list.filter(x=>!['Chase','Glow-In-The-Dark'].includes(x.file.replace(/\.[^.]+$/,'')));
