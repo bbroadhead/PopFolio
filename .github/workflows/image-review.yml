@@ -1,9 +1,18 @@
 name: Pop image review (automated scraping disabled)
 
-# The previous workflow queried hobbyDB automatically. It has been disabled
+# The previous workflow queried hobbyDB automatically. It remains disabled
 # because hobbyDB's terms prohibit automated scraping.
-# No triggers or jobs are configured; retain this file as an audit record.
-on: {}
+# Manual-only audit placeholder. No external requests or image scraping.
+on:
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+jobs:
+  audit:
+    name: Confirm automated image scraping is disabled
+    runs-on: ubuntu-latest
+    steps:
+      - name: Audit notice
+        run: echo "Automated hobbyDB scraping is disabled. No image review is performed."
