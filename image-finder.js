@@ -25,13 +25,45 @@ function showCandidates(items){
  state.candidates=items;
  $('finder-results').innerHTML=items.length?items.map((x,i)=>'<button type="button" class="finder-candidate" data-candidate="'+i+'"><img loading="lazy" src="'+esc(x.thumb||x.url)+'" alt="'+esc(x.title)+'"><span>'+esc(x.title)+'</span><small>'+esc(x.source)+'</small></button>').join(''):'<p>No previewable candidates found. Use the source links or paste an image URL below.</p>';
 }
-async function fandomSearch(p){
- const term=[p.name,p.number,p.variant].filter(Boolean).join(' ');
- const params=new URLSearchParams({action:'query',generator:'search',gsrsearch:term,gsrnamespace:'6',gsrlimit:'20',prop:'imageinfo',iiprop:'url|mime|extmetadata',iiurlwidth:'240',format:'json',origin:'*'});
- const response=await fetch('https://funko.fandom.com/api.php?'+params,{signal:AbortSignal.timeout(12000)});
- if(!response.ok)throw Error('Wiki API returned '+response.status);
+async function wikiQuery(params){
+ const query=new URLSearchParams({action:'query',format:'json',origin:'*',...params});
+ const response=await fetch('https://funko.fandom.com/api.php?'+query,{signal:AbortSignal.timeout(12000)});
+ if(!response.ok)throw Error('Funko Wiki API returned HTTP '+response.status);
  const json=await response.json();
- return Object.values(json.query?.pages||{}).flatMap(x=>(x.imageinfo||[]).filter(i=>/^image\/(png|jpeg|webp)$/i.test(i.mime||'')).map(i=>({title:x.title.replace(/^File:/,''),url:i.url,thumb:i.thumburl||i.url,source:'Funko Wiki',descriptionUrl:i.descriptionurl,license:i.extmetadata?.LicenseShortName?.value||''}))).slice(0,24);
+ if(json.error)throw Error(json.error.info||json.error.code||'Wiki API error');
+ return json;
+}
+function wikiCandidates(pages){
+ return Object.values(pages||{}).flatMap(page=>(page.imageinfo||[])
+  .filter(info=>/^image\/(png|jpeg|webp)$/i.test(info.mime||''))
+  .map(info=>({title:page.title.replace(/^File:/,''),url:info.url,thumb:info.thumburl||info.url,source:'Funko Wiki',descriptionUrl:info.descriptionurl,license:info.extmetadata?.LicenseShortName?.value||''})));
+}
+async function fandomSearch(p){
+ // Wiki articles live in namespace 0; searching only namespace 6 (files)
+ // misses product pages even when they contain suitable images.
+ const terms=[[p.name,p.number].filter(Boolean).join(' '),p.name].filter(Boolean);
+ const seen=new Map();
+ for(const term of [...new Set(terms)]){
+  for(const ns of ['0','6']){
+   const search=await wikiQuery({list:'search',srsearch:term,srnamespace:ns,srlimit:'20'});
+   const titles=(search.query?.search||[]).map(x=>x.title);
+   if(!titles.length)continue;
+   if(ns==='6'){
+    const files=await wikiQuery({titles:titles.join('|'),prop:'imageinfo',iiprop:'url|mime|extmetadata',iiurlwidth:'240'});
+    for(const x of wikiCandidates(files.query?.pages))seen.set(x.url,x);
+   }else{
+    // Resolve article lead images instead of assuming every product has a
+    // searchable filename that contains its name and number.
+    const pages=await wikiQuery({titles:titles.join('|'),prop:'pageimages',piprop:'thumbnail|original',pithumbsize:'240'});
+    for(const page of Object.values(pages.query?.pages||{})){
+     const url=page.original?.source||page.thumbnail?.source;
+     if(url&&/^https:\/\//.test(url))seen.set(url,{title:page.title,url,thumb:page.thumbnail?.source||url,source:'Funko Wiki article',descriptionUrl:'https://funko.fandom.com/wiki/'+encodeURIComponent(page.title.replace(/ /g,'_'))});
+    }
+   }
+   if(seen.size>=24)return [...seen.values()].slice(0,24);
+  }
+ }
+ return [...seen.values()].slice(0,24);
 }
 function searchLinks(p){
  const q=encodeURIComponent(['Funko Pop',p.name,p.number,p.variant].filter(Boolean).join(' '));
@@ -40,8 +72,8 @@ function searchLinks(p){
 async function search(){
  const p=selectedPop();if(!p){setStatus('Select a Pop first.',true);return}
  state.image=null;$('finder-preview').hidden=true;$('finder-selected').textContent='';searchLinks(p);
- setStatus('Searching Funko Wiki image records…');
- try{const items=await fandomSearch(p);showCandidates(items);setStatus(items.length?items.length+' candidates found. Check the number and variant carefully.':'No candidates found; try the source search links.')}
+ setStatus('Searching Funko Wiki pages and image records…');
+ try{const items=await fandomSearch(p);showCandidates(items);setStatus(items.length?items.length+' candidates found. Check the number and variant carefully.':'No wiki images found for this Pop. Try the source links or select a local image.')}
  catch(e){showCandidates([]);setStatus('Automatic wiki lookup unavailable ('+e.message+'). Use the source search links, then paste an image URL or upload a permitted image.',true)}
 }
 async function readFile(file){
