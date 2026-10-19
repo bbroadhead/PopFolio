@@ -1,21 +1,22 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),currency=v=>(v<0?'−':'')+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),signed=v=>(v>=0?'+':'−')+currency(Math.abs(v)),escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let source=null,inventory=[];
+// Match local photos by collectible number and identity; do not guess across variants.
 const localPopImages=[
- ['Campaign-Eddie-1477.PNG','campaign eddie','1477'],
- ['Yennefer-1318.PNG','yennefer','1318'],
- ['Byers-House-Will-1187.PNG','byers house will','1187'],
- ['Reinhardt-400.JPG','reinhardt','400'],
- ['Geralt-1321.JPG','geralt','1321'],
- ['Reinhardt-178.JPG','reinhardt','178'],
- ['Boba-Fett-297-Futura-Red.JPG','boba fett','297']
+ {file:'Yennefer-1318.PNG',number:'1318',name:/\\byennefer\\b/i},
+ {file:'Byers-House-Will-1187.PNG',number:'1187',name:/\\bwill\\b/i,franchise:/stranger things/i},
+ {file:'Reinhardt-400.JPG',number:'400',name:/\\breinhardt\\b/i,franchise:/overwatch/i},
+ {file:'Geralt-1321.JPG',number:'1321',name:/\\bgeralt\\b/i},
+ {file:'Reinhardt-178.JPG',number:'178',name:/\\breinhardt\\b/i,franchise:/overwatch/i},
+ {file:'Boba-Fett-297-Futura-Red.JPG',number:'297',name:/\\bboba\\s+fett\\b/i,variant:/futura|red/i}
 ];
-const normalizedPopName=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 function applyLocalPopImages(items){
  for(const p of items){
-  const name=normalizedPopName(p.name),number=String(p.number||'').trim();
-  const match=localPopImages.find(([file,label,num])=>num===number&&(name.includes(label)||label.includes(name)||label.split(' ').filter(w=>w.length>2).every(w=>name.includes(w))||label==='campaign eddie'&&name.includes('eddie')||label==='byers house will'&&name.includes('will')&&name.includes('byers'))&&(!file.includes('Futura-Red')||/futura|red/i.test([p.name,p.variant].join(' '))));
-  if(match)p.image='./assets/pop_images/'+encodeURIComponent(match[0]);
+  const number=String(p.number||'').trim();
+  const name=String(p.name||'').replace(/[^a-z0-9]+/gi,' ');
+  const variant=String(p.variant||'')+' '+String(p.name||'');
+  const match=localPopImages.find(x=>x.number===number&&x.name.test(name)&&(!x.franchise||x.franchise.test(p.franchise||''))&&(!x.variant||x.variant.test(variant)));
+  if(match)p.image='./assets/pop_images/'+encodeURIComponent(match.file);
  }
  return items;
 }
