@@ -158,7 +158,8 @@ async function save(){
   if(existing&&!confirm('An image named '+name+' already exists. Replace it?'))return setStatus('Save canceled.');
   setStatus('Uploading '+name+' to GitHub…');
   await gh(path,'PUT',{message:'Add reviewed Pop image for '+p.name+' #'+p.number,content:await bytesBase64(png),branch:'main',...(existing?{sha:existing.sha}:{})});
-  setStatus('Saved '+name+' to the repository. The automatic image index will update after the GitHub Action runs.');
+  window.dispatchEvent(new CustomEvent('popfolio-image-uploaded',{detail:{id:p.id,file:name}}));
+  setStatus('Saved '+name+' to GitHub. The Pop image has been updated in this session; the GitHub Action will update the persistent image index shortly.');
  }catch(e){setStatus('Could not save: '+e.message+'. If this is a cross-origin restriction, download the image and use the local file picker instead.',true)}
  finally{$('finder-save').disabled=false;state.token='';$('finder-token').value=''}
 }
