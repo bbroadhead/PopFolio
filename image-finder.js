@@ -14,12 +14,18 @@ function populate(){
  if(state.pops.some(p=>String(p.id)===current))select.value=current;
 }
 function setPops(pops){state.pops=Array.isArray(pops)?pops:[];populate()}
-function imageLoads(url){
+function originalWikiUrls(url){
+ if(!url||!url.includes('static.wikia.nocookie.net/'))return [url].filter(Boolean);
+ const base=url.split('/revision/')[0].split('?')[0];
+ const latest=base+'/revision/latest?format=original';
+ return [base+'?format=original',latest,base,url].filter(Boolean);
+}
+async function imageLoads(url){
  return new Promise(resolve=>{
   const img=new Image();let finished=false;
   const done=ok=>{if(!finished){finished=true;clearTimeout(timer);resolve(ok)}};
   const timer=setTimeout(()=>done(false),6500);
-  img.onload=()=>done(img.naturalWidth>0);
+  img.onload=()=>done(img.naturalWidth>0&&img.naturalHeight>0);
   img.onerror=()=>done(false);
   img.referrerPolicy='no-referrer';
   img.src=url;
@@ -29,7 +35,9 @@ function wikiRedirect(title){
  return 'https://funko.fandom.com/wiki/Special:Redirect/file/'+encodeURIComponent(title.replace(/^File:/,'').replace(/ /g,'_'));
 }
 async function resolveCandidate(x){
- const urls=[x.thumb,x.url,x.fileTitle?wikiRedirect(x.fileTitle):null].filter(Boolean);
+ // Fandom's scaled /revision/latest/scale-to-width-down URLs can return
+ // a 200-status generic placeholder rather than the collectible image.
+ const urls=[...originalWikiUrls(x.url),...originalWikiUrls(x.thumb),x.fileTitle?wikiRedirect(x.fileTitle):null].filter(Boolean);
  for(const url of [...new Set(urls)])if(await imageLoads(url))return {...x,thumb:url,workingUrl:url};
  return null;
 }
