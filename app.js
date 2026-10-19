@@ -45,6 +45,12 @@ function renderActualSales(){
  $('actual-profit-total').textContent=complete.length?currency(profit):'—';
  $('actual-roi-total').textContent=complete.length&&basis>0?(profit>=0?'+':'')+(profit/basis*100).toFixed(1)+'%':'—';
  for(const key of ['actual-profit-total','actual-roi-total']){$(key).classList.toggle('positive',complete.length>0&&profit>=0);$(key).classList.toggle('negative',complete.length>0&&profit<0)}
+ const portfolioCost=selected.reduce((sum,p)=>sum+(number(p.cost)||0),0);
+ const portfolioDifference=revenue-portfolioCost;
+ const differenceNode=$('sales-minus-portfolio-cost');
+ differenceNode.textContent=sold.length?currency(portfolioDifference):'—';
+ differenceNode.classList.toggle('positive',sold.length>0&&portfolioDifference>=0);
+ differenceNode.classList.toggle('negative',sold.length>0&&portfolioDifference<0);
  $('actual-sales-count').textContent=sold.length?complete.length===sold.length?sold.length+' sold Pops recorded':complete.length+' of '+sold.length+' sold Pops have complete profit and cost data':'No recorded sales';
 }
 function render(){renderActualSales();renderRecentPurchases();renderRecentImports();renderNumberAudit();if(!source)return;const filtered=groups(),sum=k=>filtered.reduce((v,x)=>v+(Number(x[k])||0),0),cost=sum('cost'),value=sum('value'),gain=value-cost,roi=cost?100*gain/cost:0;
