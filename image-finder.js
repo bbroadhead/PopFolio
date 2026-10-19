@@ -93,7 +93,7 @@ async function save(){
   await gh(path,'PUT',{message:'Add reviewed Pop image for '+p.name+' #'+p.number,content:await bytesBase64(png),branch:'main',...(existing?{sha:existing.sha}:{})});
   setStatus('Saved '+name+' to the repository. The automatic image index will update after the GitHub Action runs.');
  }catch(e){setStatus('Could not save: '+e.message+'. If this is a cross-origin restriction, download the image and use the local file picker instead.',true)}
- finally{$('finder-save').disabled=false;state.token=''}
+ finally{$('finder-save').disabled=false;state.token='';$('finder-token').value=''}
 }
 function init(){
  const root=$('image-finder');if(!root)return;
