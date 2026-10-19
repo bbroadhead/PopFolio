@@ -47,7 +47,7 @@ function render(){
  const groups=new Map();
  for(const p of list){const g=groups.get(p.franchise)||{name:p.franchise,count:0,sales:0,profit:0,known:0};g.count++;g.sales+=p.sale;if(p.profit!==null){g.profit+=p.profit;g.known++}groups.set(p.franchise,g)}
  const ranked=[...groups.values()].sort((a,b)=>b.sales-a.sales).slice(0,8),max=Math.max(1,...ranked.map(x=>x.sales));
- const filtered=list.filter(p=>(p.name+' '+p.franchise+' '+p.number+' '+p.variant).toLowerCase().includes(query.toLowerCase()));
+ const filtered=list.filter(p=>(p.name+' '+p.franchise+' '+p.number+' '+p.variant+' '+(p.saleId||'')).toLowerCase().includes(query.toLowerCase()));
  filtered.sort((a,b)=>sort==='profit'?(b.profit??-Infinity)-(a.profit??-Infinity):sort==='sale'?b.sale-a.sale:sort==='name'?a.name.localeCompare(b.name):sort==='roi'?(b.profitPct??-Infinity)-(a.profitPct??-Infinity):String(b.date||'').localeCompare(String(a.date||'')));
  $('sales-content').innerHTML=`
  <div class="sales-kpis">
@@ -61,6 +61,7 @@ function render(){
  <article class="sales-panel"><h2>Sales vs. purchase cost</h2><p class="muted">Total proceeds and original all-in costs</p><div class="sales-barline"><span>Sales</span><div><i style="width:${100*sales/Math.max(1,sales,costs)}%"></i></div><strong>${fmt(sales)}</strong></div><div class="sales-barline sales-cost"><span>Cost</span><div><i style="width:${100*costs/Math.max(1,sales,costs)}%"></i></div><strong>${fmt(costs)}</strong></div></article>
  <article class="sales-panel"><h2>Sales by franchise</h2>${ranked.length?ranked.map(g=>`<div class="sales-barline"><span title="${esc(g.name)}">${esc(g.name)}</span><div><i style="width:${100*g.sales/max}%"></i></div><strong>${fmt(g.sales)}</strong></div>`).join(''):'<p class="muted">Franchise chart appears after your first sale.</p>'}</article>
  </div>
+ <details class="sales-panel" id="completed-sales" style="margin-bottom:20px"><summary style="cursor:pointer;font-weight:700;font-size:1.15rem;padding:4px 0">Completed sales by Sales ID <span class="muted" style="font-size:.85rem;font-weight:400">— ${new Set(list.filter(p=>String(p.saleId||'').trim()).map(p=>String(p.saleId).trim())).size} recorded sale(s)</span></summary><div style="overflow-x:auto;margin-top:16px"><table style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th style="padding:10px">Sales ID</th><th style="padding:10px">Items</th><th style="padding:10px">Pops sold</th><th style="padding:10px">Total sales</th><th style="padding:10px">Net profit</th><th style="padding:10px">ROI</th></tr></thead><tbody>${[...list.filter(p=>String(p.saleId||'').trim()).reduce((map,p)=>{const id=String(p.saleId).trim(),g=map.get(id)||{id,items:[],sales:0,profit:0,cost:0,complete:true};g.items.push(p);g.sales+=p.sale;if(p.profit===null||p.cost===null)g.complete=false;else{g.profit+=p.profit;g.cost+=p.cost}map.set(id,g);return map},new Map()).values()].sort((a,b)=>{const na=Number(a.id),nb=Number(b.id);return Number.isFinite(na)&&Number.isFinite(nb)?na-nb:a.id.localeCompare(b.id,undefined,{numeric:true})}).map(g=>`<tr style="border-top:1px solid var(--border,#354052)"><td style="padding:10px"><strong>${esc(g.id)}</strong></td><td style="padding:10px">${g.items.length}</td><td style="padding:10px">${g.items.map(p=>esc(p.name)+(p.number?' #'+esc(p.number):'')).join(', ')}</td><td style="padding:10px">${fmt(g.sales)}</td><td style="padding:10px" class="${g.profit<0?'sales-negative':'sales-positive'}">${g.complete?fmt(g.profit):'—'}</td><td style="padding:10px">${g.complete&&g.cost>0?(100*g.profit/g.cost).toFixed(1)+'%':'—'}</td></tr>`).join('')||'<tr><td colspan="6" style="padding:12px">No completed sales with a Sales ID recorded yet.</td></tr>'}</tbody></table></div><p class="muted">One row per Sales ID. Profit and ROI require recorded net profit and all-in cost for every item in that sale.</p></details>
  <section class="sales-panel"><div class="sales-list-heading"><div><h2>Sold Pops</h2><p class="muted">Only items with a Sold for amount in the spreadsheet · ${filtered.length} shown</p></div></div>
  <div class="sales-controls"><input id="sales-search" aria-label="Search sold Pops" placeholder="Search sold Pops…" value="${esc(query)}"><select id="sales-sort" aria-label="Sort sold Pops"><option value="recent" ${sort==='recent'?'selected':''}>Purchase date</option><option value="profit" ${sort==='profit'?'selected':''}>Net profit</option><option value="roi" ${sort==='roi'?'selected':''}>Net ROI</option><option value="sale" ${sort==='sale'?'selected':''}>Sale price</option><option value="name" ${sort==='name'?'selected':''}>Name A–Z</option></select></div>
  <div class="sales-items">${filtered.length?filtered.map(p=>`<article class="sales-item"><div class="sales-item-title"><strong>${esc(p.name)} <span>${p.number?'#'+esc(p.number):''}</span></strong><small>${esc(p.franchise)} · ${esc(p.variant||'Standard')}</small></div><div class="sales-item-values"><div><small>All-in cost</small><strong>${fmt(p.cost)}</strong></div><div><small>Market value</small><strong>${fmt(p.market)}</strong></div><div><small>Sale price</small><strong>${fmt(p.sale)}</strong></div><div><small>Net profit</small><strong class="${p.profit<0?'sales-negative':'sales-positive'}">${fmt(p.profit)}</strong></div><div class="sales-roi"><small>Net profit %</small><strong class="${p.profitPct<0?'sales-negative':'sales-positive'}">${p.profitPct==null?'—':(p.profitPct>0?'+':'')+p.profitPct.toFixed(1)+'%'}</strong></div></div></article>`).join(''):'<p class="muted">No sold items match this search.</p>'}</div>
@@ -69,10 +70,23 @@ function render(){
  const input=$('sales-search');input.addEventListener('input',e=>{const pos=e.target.selectionStart;query=e.target.value;render();const el=$('sales-search');el.focus();el.setSelectionRange(pos,pos)});
  $('sales-sort').addEventListener('change',e=>{sort=e.target.value;render()});
 }
+let loading=null;
 async function load(){
- try{const res=await fetch('./data/pops.json?sales='+Date.now(),{cache:'no-store'});if(!res.ok)throw Error('HTTP '+res.status);const data=await res.json();all=Array.isArray(data.items)?data.items:[];render()}
- catch(e){$('sales-content').innerHTML='<p class="muted">Sales data could not be loaded: '+esc(e.message)+'</p>'}
+ if(loading)return loading;
+ loading=(async()=>{
+  try{
+   if(!window.PopFolioLive)throw Error('Live spreadsheet reader unavailable');
+   const result=await window.PopFolioLive.fetchAll();
+   all=result.items;
+   render();
+   window.dispatchEvent(new CustomEvent('popfolio-data-updated',{detail:{items:all,source:'Google Sheets'}}));
+  }catch(e){
+   if(!all.length)$('sales-content').innerHTML='<p class="muted">Live sales data could not be loaded: '+esc(e.message)+'. Try Sync from the Collection tab.</p>';
+  }finally{loading=null}
+ })();
+ return loading;
 }
+
 document.querySelectorAll('[data-primary-tab]').forEach(button=>button.addEventListener('click',()=>{
  const sales=button.dataset.primaryTab==='sales';
  $('collection-view').hidden=sales;$('sales-view').hidden=!sales;
