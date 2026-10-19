@@ -12,7 +12,7 @@ const estimatePlatforms={ebay:{label:'eBay',rate:13.6,fixed:.40,shipping:15,note
 function estimateSelectPlatform(key){estimatePlatform=key;const p=estimatePlatforms[key];estimateFee=p.rate;estimateFixed=p.fixed;estimateShipping=p.shipping;estimateBuyerShipping=0;estimateAds=0;}
 function estimateMount(){
  const root=$('sales-content');if(!root)return;
- const panel=document.createElement('section');panel.className='sales-panel';panel.id='sales-estimator';
+ const panel=document.createElement('details');panel.className='sales-panel';panel.id='sales-estimator';panel.innerHTML='<summary style="cursor:pointer;font-weight:700;font-size:1.15rem;padding:4px 0">Marketplace Sales Estimator <span class="muted" style="font-size:.85rem;font-weight:400">— expand to calculate potential profit</span></summary><div id="sales-estimator-body"></div>';
  root.insertBefore(panel,root.firstChild);
  function redraw(){
   const chosen=estimateIds.map(id=>all.find(p=>String(p.id)===id)).filter(Boolean);
@@ -20,7 +20,8 @@ function estimateMount(){
   const feeBase=estimatePrice+estimateBuyerShipping;const fee=(estimatePlatform==='mercari'?feeBase:estimatePlatform==='vinted'?0:feeBase*(1+estimateTax/100))*estimateFee/100+estimateFixed+estimatePrice*estimateAds/100;
   const net=estimatePrice+estimateBuyerShipping-fee-estimateShipping-(costKnown?cost:0);
   const hits=estimateQuery.trim()?all.filter(p=>!estimateIds.includes(String(p.id))&&[p.name,p.number,p.variant,p.franchise].join(' ').toLowerCase().includes(estimateQuery.toLowerCase())).slice(0,18):[];
-  panel.innerHTML='<h2>Marketplace Sales Estimator</h2><p class="muted">Select one or more Pops from your collection to estimate proceeds, fees and net profit. This calculator does not mark anything sold or edit Google Sheets.</p>'+
+  const body=panel.querySelector('#sales-estimator-body');
+  body.innerHTML='<h2>Marketplace Sales Estimator</h2><p class="muted">Select one or more Pops from your collection to estimate proceeds, fees and net profit. This calculator does not mark anything sold or edit Google Sheets.</p>'+
    '<label for="estimate-platform">Selling platform</label><div class="sales-controls"><select id="estimate-platform" aria-label="Selling platform">'+Object.entries(estimatePlatforms).map(([key,p])=>'<option value="'+key+'" '+(key===estimatePlatform?'selected':'')+'>'+p.label+'</option>').join('')+'</select></div><p class="muted">'+esc(estimatePlatforms[estimatePlatform].note)+'</p><label for="estimate-search">Find Pops by name, number, variant or franchise</label><div class="sales-controls"><input id="estimate-search" type="search" autocomplete="off" placeholder="Search collection…" value="'+esc(estimateQuery)+'"><button type="button" id="estimate-clear">Clear selection</button></div>'+
    '<div id="estimate-hits" style="max-height:250px;overflow:auto">'+hits.map(p=>'<button type="button" data-estimate-add="'+esc(p.id)+'" style="display:block;width:100%;text-align:left;margin:4px 0;padding:10px;border-radius:8px">'+esc(p.name)+' #'+esc(p.number||'—')+' · '+esc(p.franchise)+' · '+esc(p.variant||'Standard')+' · Cost '+fmt(n(p.cost))+'</button>').join('')+'</div>'+
    '<h3>Selected Pops ('+chosen.length+')</h3><div>'+ (chosen.length?chosen.map(p=>'<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--border,#354052)"><span>'+esc(p.name)+' #'+esc(p.number||'—')+' <small>'+esc(p.variant||'')+'</small></span><span>'+fmt(n(p.cost))+' <button type="button" data-estimate-remove="'+esc(p.id)+'" aria-label="Remove '+esc(p.name)+'">✕</button></span></div>').join(''):'<p class="muted">Search and select Pops to begin.</p>')+'</div>'+
