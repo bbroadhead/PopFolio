@@ -3,12 +3,12 @@ const $=id=>document.getElementById(id),currency=v=>(v<0?'−':'')+'$'+Math.abs(
 let source=null,inventory=[];
 // Match local photos by collectible number and identity; do not guess across variants.
 const localPopImages=[
- {file:'Yennefer-1318.PNG',number:'1318',name:/\\byennefer\\b/i},
- {file:'Byers-House-Will-1187.PNG',number:'1187',name:/\\bwill\\b/i,franchise:/stranger things/i},
- {file:'Reinhardt-400.JPG',number:'400',name:/\\breinhardt\\b/i,franchise:/overwatch/i},
- {file:'Geralt-1321.JPG',number:'1321',name:/\\bgeralt\\b/i},
- {file:'Reinhardt-178.JPG',number:'178',name:/\\breinhardt\\b/i,franchise:/overwatch/i},
- {file:'Boba-Fett-297-Futura-Red.JPG',number:'297',name:/\\bboba\\s+fett\\b/i,variant:/futura|red/i}
+ {file:'Yennefer-1318.PNG',number:'1318',name:/\byennefer\b/i},
+ {file:'Byers-House-Will-1187.PNG',number:'1187',name:/\bwill\b/i,franchise:/stranger things/i},
+ {file:'Reinhardt-400.JPG',number:'400',name:/\breinhardt\b/i,franchise:/overwatch/i},
+ {file:'Geralt-1321.JPG',number:'1321',name:/\bgeralt\b/i},
+ {file:'Reinhardt-178.JPG',number:'178',name:/\breinhardt\b/i,franchise:/overwatch/i},
+ {file:'Boba-Fett-297-Futura-Red.JPG',number:'297',name:/\bboba\s+fett\b/i,variant:/futura|red/i}
 ];
 function applyLocalPopImages(items){
  for(const p of items){
