@@ -45,20 +45,20 @@ function get(p){
  const override=overrides[key(p)]??overrides[String(p.id||'')];
  const manual=override!==undefined;
  const labels=Array.isArray(override)?override:override&&typeof override==='object'&&Array.isArray(override.stickers)?override.stickers:null;
- const source=manual?(labels||[]):split(p.sticker);
+ const source=manual?(labels||[]):split(p.variant);
  const list=[],seen=new Set();
  function add(base,label){
   const file=available(base);if(!file||seen.has(file))return;
   seen.add(file);list.push({file,label});
  }
- // The spreadsheet Sticker column is authoritative. Variant descriptions
- // supply conservative fallback hints only when that cell is empty.
- const raw=manual?source.join(' ; '):source.length?source.join(' ; '):String(p.variant||'');
+ // The spreadsheet Variant/Exclusive column determines sticker selection.
+ // Sticker artwork is loaded exclusively from assets/stickers in the repository.
+ const raw=source.join(' ; ');
  for(const label of manual?source:source){
   const direct=available(label);if(direct)add(direct,label);
  }
  const lower=raw.toLowerCase();
- const exclusiveHint=manual||source.length>0||/exclusive|shared\s+sticker|\bsticker\b/i.test(raw);
+ const exclusiveHint=manual||/exclusive|shared\s+sticker|\bsticker\b/i.test(raw);
  const retailerBases=new Set(['GameStop_Exclusive','Hot_Topic_Exclusive','Box_Lunch_Exclusive','Amazon_Exclusive','Target-Exclusive','Walmart-Exclusive','Best-Buy-Exclusive','F.Y.E._Exclusive','Entertainment_Earth_Exclusive','Barnes_and_Noble_Exclusive','BAM_Books-a-Million_Exclusive','Funko_Shop_Exclusive','PX_Previews_Exclusive','Walgreens_Exclusive','7-Eleven_Exclusive','Loot_Crate_Exclusive','Fugitive_Toys_Exclusive','Marvel_Collector_Corps_Exclusive']);
  for(const [re,base] of aliasRules)if(re.test(lower)&&(!retailerBases.has(base)||exclusiveHint))add(base,base.replace(/[_-]/g,' '));
  // Combined stickers take precedence over their generic counterparts.
@@ -83,7 +83,7 @@ function html(p,large=false){
  return '<div class="sticker-strip'+(large?' sticker-strip-large':'')+'" aria-label="Stickers">'+items.map(x=>'<img loading="lazy" class="sticker-art" src="./assets/stickers/'+encodeURIComponent(x.file)+'" alt="'+String(x.label).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'" title="'+String(x.label).replace(/"/g,'&quot;')+'" onerror="this.hidden=true">').join('')+'</div>';
 }
 function gallery(){
- return '<section class="sticker-gallery"><h3>Sticker Gallery</h3><p class="muted">Sticker artwork is linked using the spreadsheet Sticker column. Upload transparent images with filenames matching the sticker labels.</p><div class="sticker-gallery-grid">'+files.map(f=>'<figure><img loading="lazy" src="./assets/stickers/'+encodeURIComponent(f)+'" alt="'+f.replace(/\.[^.]+$/,'')+'"><figcaption>'+f.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ')+'</figcaption></figure>').join('')+'</div></section>';
+ return '<section class="sticker-gallery"><h3>Sticker Gallery</h3><p class="muted">Sticker artwork is matched using the spreadsheet Variant/Exclusive column. Upload transparent images with filenames matching the sticker labels.</p><div class="sticker-gallery-grid">'+files.map(f=>'<figure><img loading="lazy" src="./assets/stickers/'+encodeURIComponent(f)+'" alt="'+f.replace(/\.[^.]+$/,'')+'"><figcaption>'+f.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ')+'</figcaption></figure>').join('')+'</div></section>';
 }
 window.PopFolioStickers={ready,get,html,gallery,key};
 })();
