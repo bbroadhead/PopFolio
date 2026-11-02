@@ -1,6 +1,6 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
-if(!document.getElementById('completed-sales-responsive-style')){const style=document.createElement('style');style.id='completed-sales-responsive-style';style.textContent="\n/* Completed sales: responsive stacked records on narrow screens. */
+if(!document.getElementById('completed-sales-responsive-style')){const style=document.createElement('style');style.id='completed-sales-responsive-style';style.textContent=`\n/* Completed sales: responsive stacked records on narrow screens. */
 .completed-sales-layout{width:100%;min-width:0;overflow-x:hidden}
 .completed-sales-table{width:100%;max-width:100%;table-layout:fixed}
 .completed-sales-table th,.completed-sales-table td{box-sizing:border-box;min-width:0;white-space:normal!important;overflow-wrap:anywhere;vertical-align:top}
@@ -17,7 +17,7 @@ if(!document.getElementById('completed-sales-responsive-style')){const style=doc
 .completed-sales-table td{display:grid;grid-template-columns:minmax(75px,34%) minmax(0,1fr);gap:8px;padding:5px 0!important;overflow-wrap:anywhere}
 .completed-sales-table td::before{content:attr(data-label);font-weight:700;color:var(--muted,#a8b5ca)}
 .completed-sales-table .completed-sales-names{line-height:1.5}
-}";document.head.appendChild(style);}
+}`;document.head.appendChild(style);}
 const fmt=n=>n==null?'—':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let all=[],query='',sort='recent';
