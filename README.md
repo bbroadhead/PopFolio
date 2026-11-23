@@ -81,10 +81,11 @@ The Image Finder accepts a local JSON array of image candidates supplied by an a
   {
     "id": "YOUR_EXISTING_POP_ID",
     "imageUrl": "https://licensed-provider.example/images/figure.png",
+    "productUrl": "https://funko.com/pop-example/12345.html",
     "source": "Licensed image provider",
     "license": "Permission to store and republish confirmed"
   }
 ]
 ```
 
-Each ID must correspond to an existing collection entry. Records must have unique IDs, HTTPS image URLs, a source, and a permission description. The importer validates up to 1,000 records, then displays candidates for individual review. It does not automatically download or upload anything. A license description is user-supplied information, **not** proof of redistribution rights. The image provider must actually authorize reuse.
+The optional `productUrl` must be an official Funko product-detail URL. It is validated and displayed for verification; a URL-name match is not proof that the product, box number, or variant is correct.\n\nEach ID must correspond to an existing collection entry. Records must have unique IDs, HTTPS image URLs, a source, and a permission description. The importer validates up to 1,000 records, then displays candidates for individual review. It does not automatically download or upload anything. A license description is user-supplied information, **not** proof of redistribution rights. The image provider must actually authorize reuse.
