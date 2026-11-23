@@ -11,8 +11,8 @@ function needsImage(p){
  if(p.image&&String(p.image).trim())return false;
  // Image indexing is asynchronous; do not re-queue an image already saved
  // under its deterministic local filename.
- const expected=filename(p).replace(/\\.png$/i,'').toLowerCase();
- return ![...state.savedFiles].some(file=>String(file).replace(/\\.[^.]+$/,'').toLowerCase()===expected);
+ const expected=filename(p).replace(/\.png$/i,'').toLowerCase();
+ return ![...state.savedFiles].some(file=>String(file).replace(/\.[^.]+$/,'').toLowerCase()===expected);
 }
 function queue(){return state.pops.filter(p=>!$('finder-missing-only')?.checked||needsImage(p))}
 function updateQueueCount(){const el=$('finder-queue-count');if(el)el.textContent=state.pops.filter(needsImage).length+' Pops without images · '+queue().length+' in review queue'}
@@ -206,6 +206,9 @@ async function gh(path,method,body){
 }
 async function save(){
  const p=selectedPop(),file=$('finder-file').files[0],url=$('finder-url').value.trim()||state.image?.url;
+ // A pasted URL must be previewed for this Pop before it can be saved.
+ // This also prevents a URL edited after preview from silently changing the upload.
+ if(!file&&(!state.image||state.image.url!==url))return setStatus('Preview the current image URL before saving it.',true);
  if(!p||(!file&&!url))return setStatus('Select a Pop and an image first.',true);
  if(!$('finder-rights').checked)return setStatus('Confirm you have permission to store and republish this image.',true);
  state.token=$('finder-token').value.trim();
