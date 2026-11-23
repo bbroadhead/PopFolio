@@ -127,3 +127,5 @@ python scripts/funko_retrieve.py --input data/pops.json --output funko-candidate
 ```
 
 It skips entries with an existing `image` value, searches Funko's public catalog by name/number/variant, and attempts to resolve a single plausible official product page before extracting image metadata. If zero or multiple plausible pages are found, it skips the entry rather than guessing. Review the resulting `funko-candidates.json` in Image Finder; no image is published automatically. The discovery parser depends on Funko's current public HTML, which may change or block automated access. **This is not yet validated against live Funko search results.** Large collections take time because requests are deliberately throttled. `--include-existing` overrides the existing-image filter.
+
+**Discovery audit:** The retriever also writes `funko-candidates-review.json`, recording entries with zero/multiple product matches, robots restrictions, missing image metadata, or retrieval errors. Repeated collection entries pointing to the same product page share one page-metadata request. No candidate is automatically published.
