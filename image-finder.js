@@ -147,8 +147,8 @@ function searchLinks(p){
 }
 async function search(){
  const p=selectedPop();if(!p){setStatus('Select a Pop first.',true);return}
- const searchId=++state.searchId;
- clearSelection();searchLinks(p);
+ clearSelection();
+ const searchId=state.searchId;searchLinks(p);
  setStatus('Searching Funko Wiki pages and image records…');
  try{const items=await fandomSearch(p);if(searchId!==state.searchId)return;const ranked=items.map(x=>({...x,match:matchCandidate(p,x)})).filter(x=>x.match.score>=0).sort((a,b)=>b.match.score-a.match.score);setStatus('Checking '+ranked.length+' plausible image URLs…');const verified=(await Promise.all(ranked.slice(0,24).map(resolveCandidate))).filter(Boolean);if(searchId!==state.searchId)return;showCandidates(verified);setStatus(verified.length?verified.length+' plausible images passed preview checks. Verify the exact Pop and variant before saving.':'No plausible image previews loaded. Try official Funko search or upload an authorized local image.',!verified.length)}
  catch(e){if(searchId!==state.searchId)return;showCandidates([]);setStatus('Automatic wiki lookup unavailable ('+e.message+'). Use the source search links, then paste an image URL or upload a permitted image.',true)}
