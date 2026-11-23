@@ -68,7 +68,7 @@ function matchCandidate(pop,candidate){
  const words=value=>new Set(String(value||'').toLowerCase().match(/[a-z0-9]+/g)||[]);
  const title=words(candidate.title),name=words(pop.name);
  const number=String(pop.number||'').trim();
- const explicitNumbers=[...title].filter(x=>/^\\d{2,4}$/.test(x));
+ const explicitNumbers=[...title].filter(x=>/^[0-9]{2,4}$/.test(x)&&!(/^(19|20)[0-9]{2}$/.test(x)));
  if(number&&explicitNumbers.length&&!title.has(number))return {score:-1,reason:'Different figure number'};
  const required=variantMarkers.filter(x=>String(pop.variant||'').toLowerCase().includes(x));
  const present=variantMarkers.filter(x=>String(candidate.title||'').toLowerCase().includes(x));
