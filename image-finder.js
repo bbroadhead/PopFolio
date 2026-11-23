@@ -366,7 +366,10 @@ function parseAuthorizedManifest(text,pops){
   const license=String(entry.license||'').trim();
   if(!source||!license)throw Error('Source and image permission are required for Pop '+id);
   if(source.length>160||license.length>240)throw Error('Source or permission text too long for Pop '+id);
-  return {pop,url,source,license};
+  const productUrl=entry.productUrl==null?'':String(entry.productUrl).trim();
+  if(productUrl&&!officialProductUrl(productUrl))throw Error('Invalid official Funko product URL for Pop '+id);
+  const productMatch=productUrl?officialProductMatch(pop,productUrl):null;
+  return {pop,url,source,license,productUrl,productMatch};
  });
 }
 async function loadAuthorizedManifest(){
@@ -379,16 +382,19 @@ async function loadAuthorizedManifest(){
   for(const item of entries){
    const row=document.createElement('div');row.className='finder-bulk-row';
    const label=document.createElement('span');
-   label.textContent=item.pop.name+' #'+(item.pop.number||'—')+' — '+item.source+' — '+item.license+(needsImage(item.pop)?'':' — EXISTING IMAGE');
+   label.textContent=item.pop.name+' #'+(item.pop.number||'—')+' — '+item.source+' — '+item.license+(item.productMatch?' — Funko product: '+item.productMatch.reason:' — No official product reference')+(needsImage(item.pop)?'':' — EXISTING IMAGE');
    const button=document.createElement('button');button.type='button';button.textContent='Review image URL';
    button.addEventListener('click',async()=>{
     $('finder-pop').value=String(item.pop.id);selectPopChanged();
     $('finder-url').value=item.url;
+    if(item.productUrl){$('finder-official-product').value=item.productUrl;reviewOfficialProduct()}
     $('finder-source-credit').textContent='Manifest source: '+item.source+' · Permission: '+item.license;
     setStatus('Checking candidate preview. Verify the exact edition and image permission before saving.');
     await preview(item.url,'Authorized manifest',item.source+' — '+item.pop.name);
    });
-   row.append(label,button);root.append(row);
+   row.append(label,button);
+   if(item.productUrl){const link=document.createElement('a');link.href=item.productUrl;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Verify Funko product';row.append(link)}
+   root.append(row);
   }
   setStatus('Loaded '+entries.length+' candidate URLs for individual review. Nothing was downloaded or uploaded.');
  }catch(e){setStatus('Manifest rejected: '+e.message,true)}
