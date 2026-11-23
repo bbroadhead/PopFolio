@@ -345,6 +345,51 @@ function reviewOfficialProduct(){
  setStatus(match.reason+'. This is an advisory filename check only; no image was downloaded.',match.score===0);
 }
 
+function parseAuthorizedManifest(text,pops){
+ const data=JSON.parse(text);
+ if(!Array.isArray(data))throw Error('Manifest must be a JSON array.');
+ if(data.length>1000)throw Error('Manifest is limited to 1,000 records.');
+ const seen=new Set();
+ return data.map((entry,index)=>{
+  if(!entry||typeof entry!=='object'||Array.isArray(entry))throw Error('Invalid record '+(index+1));
+  const id=String(entry.id??'');
+  if(!id||seen.has(id))throw Error('Missing or duplicate Pop ID at record '+(index+1));
+  seen.add(id);
+  const pop=pops.find(p=>String(p.id)===id);
+  if(!pop)throw Error('Unknown Pop ID '+id);
+  const url=String(entry.imageUrl||'').trim();
+  let parsed;
+  try{parsed=new URL(url)}catch{throw Error('Invalid image URL for Pop '+id)}
+  if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw Error('Image URL must use HTTPS for Pop '+id);
+  const source=String(entry.source||'').trim();
+  const license=String(entry.license||'').trim();
+  if(!source||!license)throw Error('Source and image permission are required for Pop '+id);
+  return {pop,url,source,license};
+ });
+}
+async function loadAuthorizedManifest(){
+ const file=$('finder-manifest')?.files?.[0];
+ if(!file)return setStatus('Choose an authorized image manifest JSON file.',true);
+ try{
+  if(file.size>500000)throw Error('Manifest exceeds 500 KB.');
+  const entries=parseAuthorizedManifest(await file.text(),state.pops);
+  const root=$('finder-manifest-results');root.replaceChildren();
+  for(const item of entries){
+   const row=document.createElement('div');row.className='finder-bulk-row';
+   const label=document.createElement('span');
+   label.textContent=item.pop.name+' #'+(item.pop.number||'—')+' — '+item.source+' — '+item.license+(needsImage(item.pop)?'':' — EXISTING IMAGE');
+   const button=document.createElement('button');button.type='button';button.textContent='Review image URL';
+   button.addEventListener('click',()=>{
+    $('finder-pop').value=String(item.pop.id);selectPopChanged();
+    $('finder-url').value=item.url;
+    $('finder-source-credit').textContent='Manifest source: '+item.source+' · Permission: '+item.license;
+    setStatus('Verify this manifest image against the Pop and its permission terms, then click Preview URL.');
+   });
+   row.append(label,button);root.append(row);
+  }
+  setStatus('Loaded '+entries.length+' candidate URLs for individual review. Nothing was downloaded or uploaded.');
+ }catch(e){setStatus('Manifest rejected: '+e.message,true)}
+}
 function searchLinks(p){
  const q=encodeURIComponent(['Funko Pop',p.name,p.number,p.variant].filter(Boolean).join(' '));
  $('finder-source-links').innerHTML='<a href="https://funko.com/search/?term='+q+'" target="_blank" rel="noopener">Search official Funko catalog ↗</a> <a href="https://funko.fandom.com/wiki/Special:Search?query='+q+'" target="_blank" rel="noopener">Search Funko Wiki ↗</a> <a href="https://www.popcultcha.com.au/catalogsearch/result/?q='+q+'" target="_blank" rel="noopener">Search Popcultcha ↗</a>';
@@ -422,6 +467,7 @@ function init(){
  loadIndexedImages();
  $('finder-search').addEventListener('click',search);
  $('finder-official-check')?.addEventListener('click',reviewOfficialProduct);
+ $('finder-manifest-load')?.addEventListener('click',loadAuthorizedManifest);
  $('finder-pop').addEventListener('change',selectPopChanged);
  $('finder-next')?.addEventListener('click',nextMissing);
  $('finder-export')?.addEventListener('click',exportQueue);
