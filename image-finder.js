@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slug=s=>String(s||'').normalize('NFKD').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,110);
-const state={pops:[],selected:null,candidates:[],image:null,token:'',license:'',searchId:0};
+const state={pops:[],selected:null,candidates:[],image:null,token:'',license:'',searchId:0,previewId:0};
 const api='https://api.github.com/repos/bbroadhead/PopFolio/contents/';
 const filename=p=>slug(p.name)+'-'+slug(p.number)+(p.variant?'-'+slug(p.variant).slice(0,38):'')+'.png';
 const setStatus=(message,error=false)=>{const el=$('finder-status');if(el){el.textContent=message;el.classList.toggle('finder-error',error)}};
@@ -12,6 +12,7 @@ function queue(){return state.pops.filter(p=>!$('finder-missing-only')?.checked|
 function updateQueueCount(){const el=$('finder-queue-count');if(el)el.textContent=state.pops.filter(needsImage).length+' Pops without images · '+queue().length+' in review queue'}
 function clearSelection(){
  state.searchId++;
+ state.previewId++;
  state.image=null;
  state.candidates=[];
  $('finder-results').replaceChildren();
@@ -67,9 +68,13 @@ async function resolveCandidate(x){
  return null;
 }
 async function preview(url,source,description){
+ const previewId=++state.previewId;
+ state.image=null;
  $('finder-preview').hidden=true;
  $('finder-selected').textContent='Checking selected image…';
- if(!await imageLoads(url)){
+ const loaded=await imageLoads(url);
+ if(previewId!==state.previewId)return;
+ if(!loaded){
   state.image=null;
   $('finder-selected').textContent='Image unavailable: '+description;
   setStatus('This image URL does not load. The source may have removed or blocked the image. Choose another candidate or upload a downloaded file.',true);
