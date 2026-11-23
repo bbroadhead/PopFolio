@@ -352,7 +352,7 @@ function parseAuthorizedManifest(text,pops){
  const seen=new Set();
  return data.map((entry,index)=>{
   if(!entry||typeof entry!=='object'||Array.isArray(entry))throw Error('Invalid record '+(index+1));
-  const id=String(entry.id??'');
+  const id=String(entry.id??'').trim();
   if(!id||seen.has(id))throw Error('Missing or duplicate Pop ID at record '+(index+1));
   seen.add(id);
   const pop=pops.find(p=>String(p.id)===id);
@@ -361,7 +361,8 @@ function parseAuthorizedManifest(text,pops){
   let parsed;
   try{parsed=new URL(url)}catch{throw Error('Invalid image URL for Pop '+id)}
   if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw Error('Image URL must use HTTPS for Pop '+id);
-  if(!['https:'].includes(parsed.protocol)||['localhost','127.0.0.1','0.0.0.0','::1'].includes(parsed.hostname.toLowerCase()))throw Error('Image host is not permitted for Pop '+id);
+  const host=parsed.hostname.toLowerCase();
+  if(host==='localhost'||host.endsWith('.localhost')||host.endsWith('.local')||host==='127.0.0.1'||host==='0.0.0.0'||host==='[::1]'||host==='::1')throw Error('Image host is not permitted for Pop '+id);
   const source=String(entry.source||'').trim();
   const license=String(entry.license||'').trim();
   if(!source||!license)throw Error('Source and image permission are required for Pop '+id);
@@ -388,9 +389,9 @@ async function loadAuthorizedManifest(){
     $('finder-pop').value=String(item.pop.id);selectPopChanged();
     $('finder-url').value=item.url;
     if(item.productUrl){$('finder-official-product').value=item.productUrl;reviewOfficialProduct()}
-    $('finder-source-credit').textContent='Manifest source: '+item.source+' · Permission: '+item.license;
     setStatus('Checking candidate preview. Verify the exact edition and image permission before saving.');
-    await preview(item.url,'Authorized manifest',item.source+' — '+item.pop.name);
+    const loaded=await preview(item.url,'Authorized manifest',item.source+' — '+item.pop.name);
+    if(loaded){$('finder-source-credit').textContent='Manifest source: '+item.source+' · Claimed permission: '+item.license+' (verify independently)';$('finder-source-credit').dataset.url=item.productUrl||''}
    });
    row.append(label,button);
    if(item.productUrl){const link=document.createElement('a');link.href=item.productUrl;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Verify Funko product';row.append(link)}
