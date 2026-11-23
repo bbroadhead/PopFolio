@@ -61,6 +61,30 @@ function exportQueue(){
  const a=document.createElement('a');a.href=url;a.download='popfolio-image-review-queue.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  setStatus('Exported '+rows.length+' Pops for manual image review. No images were downloaded or uploaded.');
 }
+async function runFunkoTenEntryTest(){
+ const button=$('finder-funko-test');
+ const token=$('finder-token')?.value.trim();
+ if(!token)return setStatus('Enter a GitHub token with Actions: write permission to run the ten-entry test.',true);
+ const offset=Number($('finder-funko-start')?.value||0);
+ if(!Number.isSafeInteger(offset)||offset<0||offset>999999)return setStatus('Enter a valid starting index from 0 to 999999.',true);
+ button.disabled=true;
+ try{
+  const response=await fetch('https://api.github.com/repos/bbroadhead/PopFolio/actions/workflows/funko-discovery-test.yml/dispatches',{
+   method:'POST',
+   headers:{Accept:'application/vnd.github+json','Content-Type':'application/json',Authorization:'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28'},
+   body:JSON.stringify({ref:'main',inputs:{start:String(offset)}})
+  });
+  if(!response.ok){
+   const details=await response.json().catch(()=>({}));
+   throw Error(details.message||'GitHub HTTP '+response.status);
+  }
+  const link=$('finder-funko-test-runs');
+  link.hidden=false;
+  link.href='https://github.com/bbroadhead/PopFolio/actions/workflows/funko-discovery-test.yml';
+  setStatus('Ten-entry test requested. Open GitHub Actions using the link below to see the run summary and download candidate reports. No images will be uploaded.');
+ }catch(e){setStatus('Could not start the test: '+e.message,true)}
+ finally{button.disabled=false}
+}
 function officialProductInput(pops){
  return pops.map(p=>({id:String(p.id),name:String(p.name||''),number:String(p.number||''),variant:String(p.variant||''),productUrl:''}));
 }
@@ -495,6 +519,7 @@ function init(){
  $('finder-next')?.addEventListener('click',nextMissing);
  $('finder-export')?.addEventListener('click',exportQueue);
  $('finder-funko-export')?.addEventListener('click',exportOfficialProductInput);
+ $('finder-funko-test')?.addEventListener('click',runFunkoTenEntryTest);
  $('finder-bulk-review')?.addEventListener('click',reviewBatch);
  $('finder-bulk-upload')?.addEventListener('click',uploadBatch);
  $('finder-missing-only')?.addEventListener('change',()=>{updateQueueCount();filterOptions()});
