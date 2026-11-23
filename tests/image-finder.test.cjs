@@ -104,3 +104,14 @@ test('manifest rejects local subdomains',()=>{
 test('manifest normalizes whitespace around Pop IDs',()=>{
  assert.equal(evaluate("__test.parseAuthorizedManifest(JSON.stringify([{id:' 1 ',imageUrl:'https://example.com/pop.png',source:'Provider',license:'Allowed'}]),[{id:1,name:'Pop'}])[0].pop.id"),1);
 });
+
+test('Image Finder markup includes every authorized manifest control',()=>{
+ const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+ for(const id of ['finder-manifest','finder-manifest-load','finder-manifest-results','finder-official-product','finder-official-check','finder-official-review']){
+  assert.match(html,new RegExp('id="'+id+'"'));
+ }
+});
+test('Image Finder markup includes a versioned script reference',()=>{
+ const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+ assert.match(html,/image-finder\\.js\\?v=[a-z0-9-]+/i);
+});
