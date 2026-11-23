@@ -63,3 +63,9 @@ Open **Individual Pop explorer → Find & save Pop images**. The finder can filt
 Before saving, verify the exact character, Pop number, exclusive/chase edition, and rights to store and republish the image. Paste a direct HTTPS image URL and preview it, or choose a PNG/JPEG/WebP file and wait for its preview. The finder uploads the reviewed image to `assets/pop_images/` using a fine-grained GitHub token entered in the browser; the token is not persisted by the application. Existing filenames require an explicit overwrite confirmation. The repository image-index workflow updates the persistent index after a successful commit.
 
 The review queue consults the Pop's image field and the existing image filename index, including non-PNG extensions. It is a convenience filter, not a definitive license or image-identity audit. Automatic Funko.com image discovery and unattended bulk imports are **not implemented**. Do not assume product images are licensed for redistribution merely because they appear on Funko.com.
+
+### Reviewed local-image batch upload
+
+Select multiple PNG/JPEG/WebP files in the Image Finder, click **Review batch matches**, and correct any ambiguous assignments with the per-file Pop dropdown. For each image, click **Review selected image**, inspect the preview and exact edition, confirm reuse rights, then click **Approve for batch**. Enter a GitHub fine-grained token and select **Upload approved images (skip existing)**. Confirm the final upload count.
+
+Uploads run sequentially and display counts of successful, skipped, and failed items. Existing images are skipped rather than overwritten. Failed approved items remain available for retry in the same page session. Keep the browser tab open until completion. This workflow uploads only files you selected and reviewed; it does not scrape Funko.com or grant image redistribution rights.
