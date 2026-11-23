@@ -5,7 +5,7 @@ const slug=s=>String(s||'').normalize('NFKD').replace(/[^a-zA-Z0-9]+/g,'-').repl
 const state={pops:[],selected:null,candidates:[],image:null,token:'',license:'',searchId:0,previewId:0,savedFiles:new Set()};
 const api='https://api.github.com/repos/bbroadhead/PopFolio/contents/';
 const filename=p=>slug(p.name)+'-'+slug(p.number)+(p.variant?'-'+slug(p.variant).slice(0,38):'')+'.png';
-const normalizeImageName=value=>String(value||'').split('/').pop().replace(/\\.[^.]+$/,'').toLowerCase();
+const normalizeImageName=value=>String(value||'').split('/').pop().replace(/\.[^.]+$/,'').toLowerCase();
 const existingImageNames=()=>new Set([...state.savedFiles].map(normalizeImageName));
 const setStatus=(message,error=false)=>{const el=$('finder-status');if(el){el.textContent=message;el.classList.toggle('finder-error',error)}};
 function selectedPop(){return state.pops.find(p=>String(p.id)===String($('finder-pop')?.value))}
