@@ -1,6 +1,6 @@
 """Offline tests for Funko metadata retrieval; no requests to Funko.com."""
 import unittest
-from scripts.funko_retrieve import official_url, extract, product_score, SearchLinks
+from scripts.funko_retrieve import official_url, extract, product_score, SearchLinks, select_batch
 
 class FunkoRetrieveTests(unittest.TestCase):
     def test_official_url(self):
@@ -30,6 +30,17 @@ class FunkoRetrieveTests(unittest.TestCase):
         parser = SearchLinks()
         parser.feed('<a href="/pop-superman/12345.html">Superman</a>')
         self.assertEqual(parser.links, ["/pop-superman/12345.html"])
+
+    def test_small_batch_and_offset(self):
+        rows = [{"id": str(i)} for i in range(30)]
+        self.assertEqual([r["id"] for r in select_batch(rows, 10, 5)], ["10", "11", "12", "13", "14"])
+        self.assertEqual(len(select_batch(rows, 0, 10)), 10)
+
+    def test_invalid_batch(self):
+        with self.assertRaises(ValueError):
+            select_batch([1, 2], -1, 1)
+        with self.assertRaises(ValueError):
+            select_batch([1, 2], 0, 0)
 
     def test_no_images(self):
         self.assertEqual(extract("<html></html>", "https://funko.com/pop-superman/12345.html"), [])
