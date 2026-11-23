@@ -1,0 +1,6 @@
+# Local Funko product-image discovery outputs (not licensed for automatic publication)
+funko-previews/
+funko-candidates.json
+funko-products.json
+__pycache__/
+*.pyc
