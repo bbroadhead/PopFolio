@@ -104,7 +104,9 @@ function reviewBatch(){
   }
   select.value=item.pop?String(item.pop.id):'';
   const button=document.createElement('button');button.type='button';button.textContent='Review selected image';
-  button.addEventListener('click',()=>{
+  button.addEventListener('click',async()=>{
+   item.approved=false;approve.disabled=true;approve.textContent='Approve for batch';
+   $('finder-bulk-upload').disabled=!state.batch.some(x=>x.approved);
    const pop=state.pops.find(p=>String(p.id)===select.value);
    if(!pop)return setStatus('Choose a Pop for this image first.',true);
    const duplicates=[...root.querySelectorAll('.finder-bulk-row select')].filter(x=>x.value===select.value);
@@ -112,16 +114,18 @@ function reviewBatch(){
    if(!needsImage(pop)&&!confirm('This Pop already has an image. Continue to review a possible replacement?'))return;
    $('finder-pop').value=String(pop.id);selectPopChanged();
    const dt=new DataTransfer();dt.items.add(item.file);$('finder-file').files=dt.files;
-   preview(URL.createObjectURL(item.file),'Local file',item.file.name,item.file);
-   setStatus('Verify the selected Pop, exact variant, and image rights before saving.');
+   const objectUrl=URL.createObjectURL(item.file);
+   try{
+    const loaded=await preview(objectUrl,'Local file',item.file.name,item.file);
+    if(loaded&&String(selectedPop()?.id)===String(pop.id)&&select.value===String(pop.id)){
+     approve.disabled=false;
+     setStatus('Preview ready. Verify the edition and check image rights, then approve this file.');
+    }
+   }finally{URL.revokeObjectURL(objectUrl)}
   });
   const approve=document.createElement('button');approve.type='button';approve.textContent='Approve for batch';approve.disabled=true;
   select.addEventListener('change',()=>{item.approved=false;approve.disabled=true;approve.textContent='Approve for batch';$('finder-bulk-upload').disabled=!state.batch.some(x=>x.approved)});
-  button.addEventListener('click',()=>{
-   const pop=state.pops.find(p=>String(p.id)===select.value);
-   if(!pop)return;
-   item.approved=false;approve.disabled=false;approve.textContent='Approve for batch';
-  });
+
   approve.addEventListener('click',()=>{
    const pop=state.pops.find(p=>String(p.id)===select.value);
    if(!pop||!needsImage(pop))return setStatus('Batch uploads skip Pops with existing images. Use individual save to replace one.',true);
@@ -231,18 +235,19 @@ async function preview(url,source,description,file=null){
  $('finder-preview').hidden=true;
  $('finder-selected').textContent='Checking selected image…';
  const loaded=await imageLoads(url);
- if(previewId!==state.previewId)return;
+ if(previewId!==state.previewId)return false;
  if(!loaded){
   state.image=null;
   $('finder-selected').textContent='Image unavailable: '+description;
   setStatus('This image URL does not load. The source may have removed or blocked the image. Choose another candidate or upload a downloaded file.',true);
-  return;
+  return false;
  }
  state.image={url,source,description,file};
  $('finder-preview').src=url;
  $('finder-preview').hidden=false;
  $('finder-selected').textContent='Selected: '+description;
  setStatus('Image preview loaded. Note: a preview does not guarantee that the source permits browser downloads.');
+ return true;
 }
 // Candidate ranking is advisory only; a human must verify the exact edition.
 const variantMarkers=['chase','flocked','diamond','metallic','blacklight','black light','glow','gitd','pearlescent'];
