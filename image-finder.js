@@ -102,7 +102,7 @@ async function fandomSearch(p){
 }
 function searchLinks(p){
  const q=encodeURIComponent(['Funko Pop',p.name,p.number,p.variant].filter(Boolean).join(' '));
- $('finder-source-links').innerHTML='<a href="https://funko.fandom.com/wiki/Special:Search?query='+q+'" target="_blank" rel="noopener">Search Funko Wiki ↗</a> <a href="https://www.popcultcha.com.au/catalogsearch/result/?q='+q+'" target="_blank" rel="noopener">Search Popcultcha ↗</a>';
+ $('finder-source-links').innerHTML='<a href="https://funko.com/search/?q='+q+'" target="_blank" rel="noopener">Search official Funko catalog ↗</a> <a href="https://funko.fandom.com/wiki/Special:Search?query='+q+'" target="_blank" rel="noopener">Search Funko Wiki ↗</a> <a href="https://www.popcultcha.com.au/catalogsearch/result/?q='+q+'" target="_blank" rel="noopener">Search Popcultcha ↗</a>';
 }
 async function search(){
  const p=selectedPop();if(!p){setStatus('Select a Pop first.',true);return}
