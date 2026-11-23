@@ -185,12 +185,19 @@ def download_preview(url, dest):
         return str(dest)
 
 
+def select_batch(records, start=0, limit=None):
+    if start < 0 or (limit is not None and limit < 1):
+        raise ValueError("Start must be nonnegative and limit must be positive")
+    return records[start:start + limit if limit is not None else None]
+
+
 def run(args):
     records = json.loads(Path(args.input).read_text(encoding="utf-8"))
     if isinstance(records, dict):
         records = records.get("items", [])
     if not isinstance(records, list) or len(records) > 10000:
         raise ValueError("Input must be an array of at most 10,000 product records")
+    records = select_batch(records, args.start, args.limit)
     robots = RobotFileParser()
     robots.set_url("https://funko.com/robots.txt")
     robots.read()
@@ -201,7 +208,7 @@ def run(args):
     folder = Path(args.download_dir) if args.download_dir else None
     if folder:
         folder.mkdir(parents=True, exist_ok=True)
-    for i, item in enumerate(records):
+    for i, item in enumerate(records, start=args.start):
         ident = str(item.get("id", "")).strip()
         url = item.get("productUrl", "")
         if not ident or ident in seen:
@@ -258,6 +265,8 @@ if __name__ == "__main__":
     parser.add_argument("--output", default="funko-candidates.json")
     parser.add_argument("--download-dir", help="Opt-in local image downloads; never committed automatically")
     parser.add_argument("--delay", type=float, default=2.0)
+    parser.add_argument("--start", type=int, default=0, help="Zero-based collection offset for testing or batches")
+    parser.add_argument("--limit", type=int, help="Process only this many entries (recommended: 10 for first run)")
     parser.add_argument("--review-output", help="JSON report for missing or ambiguous matches")
     parser.add_argument("--include-existing", action="store_true", help="Include collection entries that already have an image")
     run(parser.parse_args())
