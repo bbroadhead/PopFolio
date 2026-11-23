@@ -68,7 +68,7 @@ function batchMatch(file,pops){
  const tokens=new Set(base.split(/[^a-z0-9]+/).filter(Boolean));
  // A file that explicitly identifies another figure number must not be
  // attached to a different number just because its character name matches.
- const numbered=[...tokens].filter(t=>t.length>=2&&t.length<=4&&[...t].every(ch=>ch>='0'&&ch<='9')&&!t.startsWith('19')&&!t.startsWith('20'));
+ const numbered=[...tokens].filter(t=>t.length>=2&&t.length<=4&&[...t].every(ch=>ch>='0'&&ch<='9')&&!(t.length===4&&(t.startsWith('19')||t.startsWith('20'))));
  if(numbered.length>1)return {pop:null,reason:'Multiple figure numbers in filename'};
  const numberMatches=pops.filter(p=>p.number&&tokens.has(String(p.number).toLowerCase())&&slug(p.name).toLowerCase().split('-').filter(Boolean).every(t=>tokens.has(t)));
  if(numberMatches.length!==1)return {pop:null,reason:numberMatches.length?'Ambiguous match':'No confident match'};
