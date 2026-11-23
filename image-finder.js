@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slug=s=>String(s||'').normalize('NFKD').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,110);
-const state={pops:[],selected:null,candidates:[],image:null,token:'',license:''};
+const state={pops:[],selected:null,candidates:[],image:null,token:'',license:'',searchId:0};
 const api='https://api.github.com/repos/bbroadhead/PopFolio/contents/';
 const filename=p=>slug(p.name)+'-'+slug(p.number)+(p.variant?'-'+slug(p.variant).slice(0,38):'')+'.png';
 const setStatus=(message,error=false)=>{const el=$('finder-status');if(el){el.textContent=message;el.classList.toggle('finder-error',error)}};
@@ -56,6 +56,22 @@ async function preview(url,source,description){
  $('finder-selected').textContent='Selected: '+description;
  setStatus('Image preview loaded. Note: a preview does not guarantee that the source permits browser downloads.');
 }
+// Candidate ranking is advisory only; a human must verify the exact edition.
+const variantMarkers=['chase','flocked','diamond','metallic','blacklight','black light','glow','gitd','pearlescent'];
+function matchCandidate(pop,candidate){
+ const words=value=>new Set(String(value||'').toLowerCase().match(/[a-z0-9]+/g)||[]);
+ const title=words(candidate.title),name=words(pop.name);
+ const number=String(pop.number||'').trim();
+ const explicitNumbers=[...title].filter(x=>/^\\d{2,4}$/.test(x));
+ if(number&&explicitNumbers.length&&!title.has(number))return {score:-1,reason:'Different figure number'};
+ const required=variantMarkers.filter(x=>String(pop.variant||'').toLowerCase().includes(x));
+ const present=variantMarkers.filter(x=>String(candidate.title||'').toLowerCase().includes(x));
+ if(required.some(x=>!present.includes(x))||present.some(x=>!required.includes(x)))return {score:-1,reason:'Different variant'};
+ const meaningful=[...name].filter(x=>x.length>2);
+ const overlap=meaningful.filter(x=>title.has(x)).length/Math.max(1,meaningful.length);
+ if(overlap<0.5)return {score:-1,reason:'Name mismatch'};
+ return {score:overlap+(number&&title.has(number)?0.4:0),reason:number&&title.has(number)?'Number matched':'Verify number and edition'};
+}
 function showCandidates(items){
  state.candidates=items;
  $('finder-results').innerHTML=items.length?items.map((x,i)=>'<button type="button" class="finder-candidate" data-candidate="'+i+'"><img loading="lazy" referrerpolicy="no-referrer" src="'+esc(x.thumb||x.url)+'" alt="'+esc(x.title)+'"><span>'+esc(x.title)+'</span><small>'+esc(x.source)+'</small></button>').join(''):'<p>No working image previews found. Use the source links or upload an image file.</p>';
@@ -106,10 +122,11 @@ function searchLinks(p){
 }
 async function search(){
  const p=selectedPop();if(!p){setStatus('Select a Pop first.',true);return}
+ const searchId=++state.searchId;
  state.image=null;$('finder-preview').hidden=true;$('finder-selected').textContent='';searchLinks(p);
  setStatus('Searching Funko Wiki pages and image records…');
- try{const items=await fandomSearch(p);setStatus('Checking '+items.length+' candidate image URLs…');const verified=(await Promise.all(items.slice(0,24).map(resolveCandidate))).filter(Boolean);showCandidates(verified);setStatus(verified.length?verified.length+' images passed preview checks. Verify the exact Pop and variant before saving.':'The Wiki returned results, but none of their image URLs loaded. Try the source links or upload a local image.',!verified.length)}
- catch(e){showCandidates([]);setStatus('Automatic wiki lookup unavailable ('+e.message+'). Use the source search links, then paste an image URL or upload a permitted image.',true)}
+ try{const items=await fandomSearch(p);if(searchId!==state.searchId)return;const ranked=items.map(x=>({...x,match:matchCandidate(p,x)})).filter(x=>x.match.score>=0).sort((a,b)=>b.match.score-a.match.score);setStatus('Checking '+ranked.length+' plausible image URLs…');const verified=(await Promise.all(ranked.slice(0,24).map(resolveCandidate))).filter(Boolean);if(searchId!==state.searchId)return;showCandidates(verified);setStatus(verified.length?verified.length+' plausible images passed preview checks. Verify the exact Pop and variant before saving.':'No plausible image previews loaded. Try official Funko search or upload an authorized local image.',!verified.length)}
+ catch(e){if(searchId!==state.searchId)return;showCandidates([]);setStatus('Automatic wiki lookup unavailable ('+e.message+'). Use the source search links, then paste an image URL or upload a permitted image.',true)}
 }
 async function readFile(file){
  if(!file||!/^image\/(png|jpeg|webp)$/i.test(file.type))throw Error('Choose a PNG, JPEG, or WebP image.');
@@ -166,7 +183,7 @@ async function save(){
 function init(){
  const root=$('image-finder');if(!root)return;
  $('finder-search').addEventListener('click',search);
- $('finder-results').addEventListener('click',e=>{const b=e.target.closest('[data-candidate]');if(!b)return;const x=state.candidates[Number(b.dataset.candidate)];preview(x.workingUrl||x.url,x.source,x.title);$('finder-url').value=x.workingUrl||x.url;$('finder-file').value='';$('finder-source-credit').textContent='Source: '+x.source+(x.license?' · License information: '+x.license:' · Check usage rights on the source page');$('finder-source-credit').dataset.url=x.descriptionUrl||''});
+ $('finder-results').addEventListener('click',e=>{const b=e.target.closest('[data-candidate]');if(!b)return;const x=state.candidates[Number(b.dataset.candidate)];if(!x)return;preview(x.workingUrl||x.url,x.source,x.title);$('finder-url').value=x.workingUrl||x.url;$('finder-file').value='';$('finder-source-credit').textContent='Source: '+x.source+(x.license?' · License information: '+x.license:' · Check usage rights on the source page');$('finder-source-credit').dataset.url=x.descriptionUrl||''});
  $('finder-url-preview').addEventListener('click',()=>{const url=$('finder-url').value.trim();if(!/^https:\/\//i.test(url))return setStatus('Enter a secure HTTPS image URL.',true);$('finder-file').value='';preview(url,'URL',url)});
  $('finder-file').addEventListener('change',()=>{const f=$('finder-file').files[0];if(!f)return;preview(URL.createObjectURL(f),'Local file',f.name)});
  $('finder-save').addEventListener('click',save);
