@@ -60,25 +60,39 @@ function exportQueue(){
  setStatus('Exported '+rows.length+' Pops for manual image review. No images were downloaded or uploaded.');
 }
 function batchMatch(file,pops){
+ if(!/^image\\/(png|jpeg|webp)$/i.test(file.type)||file.size>10*1024*1024||file.size===0)return {pop:null,reason:'Unsupported or oversized image'};
  const base=normalizeImageName(file.name);
  const exact=pops.filter(p=>normalizeImageName(filename(p))===base);
  if(exact.length===1)return {pop:exact[0],reason:'Exact expected filename'};
  if(exact.length>1)return {pop:null,reason:'Ambiguous filename'};
  const tokens=new Set(base.split(/[^a-z0-9]+/).filter(Boolean));
+ // A file that explicitly identifies another figure number must not be
+ // attached to a different number just because its character name matches.
+ const numbered=[...tokens].filter(t=>/^\\d{2,4}$/.test(t)&&!/^20\\d{2}$/.test(t)&&!/^19\\d{2}$/.test(t));
+ if(numbered.length>1)return {pop:null,reason:'Multiple figure numbers in filename'};
  const numberMatches=pops.filter(p=>p.number&&tokens.has(String(p.number).toLowerCase())&&slug(p.name).toLowerCase().split('-').filter(Boolean).every(t=>tokens.has(t)));
- return numberMatches.length===1?{pop:numberMatches[0],reason:'Name and number matched'}:{pop:null,reason:numberMatches.length?'Ambiguous match':'No confident match'};
+ if(numberMatches.length!==1)return {pop:null,reason:numberMatches.length?'Ambiguous match':'No confident match'};
+ const pop=numberMatches[0];
+ const variants=variantMarkers.filter(marker=>String(pop.variant||'').toLowerCase().includes(marker));
+ const fileVariants=variantMarkers.filter(marker=>base.replace(/-/g,' ').includes(marker));
+ if(variants.some(v=>!fileVariants.includes(v))||fileVariants.some(v=>!variants.includes(v)))return {pop:null,reason:'Variant needs manual matching'};
+ return {pop,reason:'Name and number matched'};
 }
 function reviewBatch(){
  const files=[...($('finder-bulk-files')?.files||[])];
  const root=$('finder-bulk-results');root.replaceChildren();
  if(!files.length)return setStatus('Choose image files for batch review first.',true);
+ const matchedIds=new Set();
  for(const file of files){
   const result=batchMatch(file,state.pops);
+  if(result.pop&&matchedIds.has(String(result.pop.id))){result.pop=null;result.reason='Duplicate match in batch'}
+  if(result.pop)matchedIds.add(String(result.pop.id));
   const row=document.createElement('div');row.className='finder-bulk-row';
   const label=document.createElement('span');
   label.textContent=file.name+' — '+(result.pop?result.pop.name+' #'+(result.pop.number||'—'):'Unmatched')+' ('+result.reason+')';
   row.append(label);
   if(result.pop){
+   if(!needsImage(result.pop)){label.textContent+=' — Existing image: review before replacement';}
    const button=document.createElement('button');button.type='button';button.textContent='Review this image';
    button.addEventListener('click',()=>{
     $('finder-pop').value=String(result.pop.id);selectPopChanged();
