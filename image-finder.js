@@ -82,32 +82,39 @@ function reviewBatch(){
  const files=[...($('finder-bulk-files')?.files||[])];
  const root=$('finder-bulk-results');root.replaceChildren();
  if(!files.length)return setStatus('Choose image files for batch review first.',true);
- const matchedIds=new Set();
- for(const file of files){
-  const result=batchMatch(file,state.pops);
-  if(result.pop&&matchedIds.has(String(result.pop.id))){result.pop=null;result.reason='Duplicate match in batch'}
-  if(result.pop)matchedIds.add(String(result.pop.id));
+ const matches=files.map(file=>({file,...batchMatch(file,state.pops)}));
+ const counts=new Map();
+ for(const item of matches)if(item.pop)counts.set(String(item.pop.id),(counts.get(String(item.pop.id))||0)+1);
+ for(const item of matches){
+  if(item.pop&&counts.get(String(item.pop.id))>1){item.pop=null;item.reason='Duplicate match in batch'}
   const row=document.createElement('div');row.className='finder-bulk-row';
   const label=document.createElement('span');
-  label.textContent=file.name+' — '+(result.pop?result.pop.name+' #'+(result.pop.number||'—'):'Unmatched')+' ('+result.reason+')';
-  row.append(label);
-  if(result.pop){
-   if(!needsImage(result.pop)){label.textContent+=' — Existing image: review before replacement';}
-   const button=document.createElement('button');button.type='button';button.textContent='Review this image';
-   button.addEventListener('click',()=>{
-    $('finder-pop').value=String(result.pop.id);selectPopChanged();
-    // FileList is read-only: preview this batch file and keep it as the
-    // selected upload without altering the user's original batch selection.
-    const dt=new DataTransfer();dt.items.add(file);$('finder-file').files=dt.files;
-    preview(URL.createObjectURL(file),'Local file',file.name,file);
-    setStatus('Review the image and confirm reuse rights before uploading.');
-   });
-   row.append(button);
+  label.textContent=item.file.name+' — '+item.reason;
+  const select=document.createElement('select');select.setAttribute('aria-label','Match Pop for '+item.file.name);
+  const blank=document.createElement('option');blank.value='';blank.textContent='Skip / unmatched';select.append(blank);
+  for(const pop of state.pops){
+   const option=document.createElement('option');option.value=String(pop.id);
+   option.textContent=(pop.franchise||'')+' · '+pop.name+' #'+(pop.number||'—')+(pop.variant?' · '+pop.variant:'')+(needsImage(pop)?'':' · HAS IMAGE');
+   select.append(option);
   }
-  root.append(row);
+  select.value=item.pop?String(item.pop.id):'';
+  const button=document.createElement('button');button.type='button';button.textContent='Review selected image';
+  button.addEventListener('click',()=>{
+   const pop=state.pops.find(p=>String(p.id)===select.value);
+   if(!pop)return setStatus('Choose a Pop for this image first.',true);
+   const duplicates=[...root.querySelectorAll('.finder-bulk-row select')].filter(x=>x.value===select.value);
+   if(duplicates.length>1&&!confirm('Multiple files are assigned to this Pop. Review this file anyway?'))return;
+   if(!needsImage(pop)&&!confirm('This Pop already has an image. Continue to review a possible replacement?'))return;
+   $('finder-pop').value=String(pop.id);selectPopChanged();
+   const dt=new DataTransfer();dt.items.add(item.file);$('finder-file').files=dt.files;
+   preview(URL.createObjectURL(item.file),'Local file',item.file.name,item.file);
+   setStatus('Verify the selected Pop, exact variant, and image rights before saving.');
+  });
+  row.append(label,select,button);root.append(row);
  }
- setStatus('Matched '+files.length+' local files for individual review. No files have been uploaded.');
+ setStatus('Prepared '+files.length+' local images. Review and correct each match; no images were uploaded.');
 }
+
 function filterOptions(){const q=String($('finder-pop-filter')?.value||'').toLowerCase();const missingOnly=!!$('finder-missing-only')?.checked;for(const option of $('finder-pop').options){if(!option.value)continue;const p=state.pops.find(x=>String(x.id)===option.value);option.hidden=!option.textContent.toLowerCase().includes(q)||(missingOnly&&p&&!needsImage(p))}}
 function populate(){
  const select=$('finder-pop');if(!select)return;
