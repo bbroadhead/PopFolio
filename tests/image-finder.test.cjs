@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../image-finder.js'),'utf8');
 function evaluate(expression){
  const context={window:{},document:{addEventListener(){}},URL,Set,Image:function(){}};
- vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,csvCell,batchMatch,officialProductUrl,officialProductMatch,parseAuthorizedManifest,state};})();'),context);
+ vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,csvCell,batchMatch,officialProductUrl,officialProductMatch,parseAuthorizedManifest,officialProductInput,state};})();'),context);
  return vm.runInNewContext(expression,context);
 }
 test('normalizes indexed image filenames regardless of extension and path',()=>{
@@ -114,4 +114,15 @@ test('Image Finder markup includes every authorized manifest control',()=>{
 test('Image Finder markup includes a versioned script reference',()=>{
  const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
  assert.match(html,/image-finder\\.js\\?v=[a-z0-9-]+/i);
+});
+
+test('Funko retrieval input preserves collection identifiers and leaves URLs unverified',()=>{
+ const result=evaluate("__test.officialProductInput([{id:'Back to the Future:6',name:'Doc',number:15,variant:'Town'}])");
+ assert.equal(result[0].id,'Back to the Future:6');
+ assert.equal(result[0].number,'15');
+ assert.equal(result[0].productUrl,'');
+});
+test('Funko retrieval export button exists in Image Finder',()=>{
+ const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+ assert.match(html,/id="finder-funko-export"/);
 });
