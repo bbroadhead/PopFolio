@@ -105,7 +105,7 @@ function reviewBatch(){
   select.value=item.pop?String(item.pop.id):'';
   const button=document.createElement('button');button.type='button';button.textContent='Review selected image';
   button.addEventListener('click',async()=>{
-   item.approved=false;approve.disabled=true;approve.textContent='Approve for batch';
+   item.approved=false;item.rightsConfirmed=false;approve.disabled=true;approve.textContent='Approve for batch';
    $('finder-bulk-upload').disabled=!state.batch.some(x=>x.approved);
    const pop=state.pops.find(p=>String(p.id)===select.value);
    if(!pop)return setStatus('Choose a Pop for this image first.',true);
@@ -121,17 +121,17 @@ function reviewBatch(){
      approve.disabled=false;
      setStatus('Preview ready. Verify the edition and check image rights, then approve this file.');
     }
-   }finally{URL.revokeObjectURL(objectUrl)}
+   }finally{setTimeout(()=>URL.revokeObjectURL(objectUrl),60000)}
   });
   const approve=document.createElement('button');approve.type='button';approve.textContent='Approve for batch';approve.disabled=true;
-  select.addEventListener('change',()=>{item.approved=false;approve.disabled=true;approve.textContent='Approve for batch';$('finder-bulk-upload').disabled=!state.batch.some(x=>x.approved)});
+  select.addEventListener('change',()=>{item.approved=false;item.rightsConfirmed=false;approve.disabled=true;approve.textContent='Approve for batch';$('finder-bulk-upload').disabled=!state.batch.some(x=>x.approved)});
 
   approve.addEventListener('click',()=>{
    const pop=state.pops.find(p=>String(p.id)===select.value);
    if(!pop||!needsImage(pop))return setStatus('Batch uploads skip Pops with existing images. Use individual save to replace one.',true);
    if(!state.image||state.image.file!==item.file||String(selectedPop()?.id)!==String(pop.id))return setStatus('Preview this exact image and Pop again before approval.',true);
    if(!$('finder-rights').checked)return setStatus('Confirm you have permission to store and republish this image first.',true);
-   item.pop=pop;item.approved=true;approve.disabled=true;approve.textContent='Approved';
+   item.pop=pop;item.approved=true;item.rightsConfirmed=true;approve.disabled=true;approve.textContent='Approved';
    $('finder-bulk-upload').disabled=false;
   });
   row.append(label,select,button,approve);root.append(row);
@@ -144,7 +144,7 @@ async function uploadBatch(){
  if(state.batchBusy)return;
  const items=state.batch.filter(x=>x.approved);
  if(!items.length)return setStatus('Review and approve at least one image first.',true);
- if(!$('finder-rights').checked)return setStatus('Confirm image reuse rights before uploading.',true);
+ if(items.some(x=>!x.rightsConfirmed))return setStatus('Each approved image needs its own reuse-rights confirmation.',true);
  const token=$('finder-token').value.trim();
  if(!token)return setStatus('Enter your GitHub token before uploading.',true);
  if(new Set(items.map(x=>String(x.pop.id))).size!==items.length)return setStatus('Duplicate Pop assignments in approved batch. Correct them before uploading.',true);
@@ -163,7 +163,7 @@ async function uploadBatch(){
     if(existing){skipped++;continue}
     const png=await toPng(item.file);
     await gh(path,'PUT',{message:'Add approved Pop image for '+p.name+' #'+p.number,content:await bytesBase64(png),branch:'main'});
-    p.image='assets/pop_images/'+name;state.savedFiles.add(name);item.approved=false;
+    p.image='assets/pop_images/'+name;state.savedFiles.add(name);item.approved=false;item.rightsConfirmed=false;
     window.dispatchEvent(new CustomEvent('popfolio-image-uploaded',{detail:{id:p.id,file:name}}));
     uploaded++;
    }catch(e){failed++;item.error=e.message}
