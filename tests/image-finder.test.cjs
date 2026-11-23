@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../image-finder.js'),'utf8');
 function evaluate(expression){
  const context={window:{},document:{addEventListener(){}},URL,Set,Image:function(){}};
- vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,csvCell,batchMatch,officialProductUrl,officialProductMatch,state};})();'),context);
+ vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,csvCell,batchMatch,officialProductUrl,officialProductMatch,parseAuthorizedManifest,state};})();'),context);
  return vm.runInNewContext(expression,context);
 }
 test('normalizes indexed image filenames regardless of extension and path',()=>{
@@ -76,4 +76,14 @@ test('official product matcher warns on mismatched product',()=>{
 });
 test('official product matcher warns on mismatched chase edition',()=>{
  assert.equal(evaluate("__test.officialProductMatch({name:'Superman',variant:'Chase'},'https://funko.com/pop-superman/85642.html').score"),0);
+});
+
+test('authorized manifest parses a valid image candidate',()=>{
+ assert.equal(evaluate("__test.parseAuthorizedManifest(JSON.stringify([{id:1,imageUrl:'https://example.com/pop.png',source:'Licensed provider',license:'Permission confirmed'}]),[{id:1,name:'Pop'}]).length"),1);
+});
+test('authorized manifest rejects duplicate Pop identifiers',()=>{
+ assert.equal(evaluate("(()=>{try{__test.parseAuthorizedManifest(JSON.stringify([{id:1,imageUrl:'https://example.com/a.png',source:'Provider',license:'Allowed'},{id:1,imageUrl:'https://example.com/b.png',source:'Provider',license:'Allowed'}]),[{id:1,name:'Pop'}]);return false}catch{return true}})()"),true);
+});
+test('authorized manifest rejects insecure image URLs',()=>{
+ assert.equal(evaluate("(()=>{try{__test.parseAuthorizedManifest(JSON.stringify([{id:1,imageUrl:'http://example.com/a.png',source:'Provider',license:'Allowed'}]),[{id:1,name:'Pop'}]);return false}catch{return true}})()"),true);
 });
