@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../image-finder.js'),'utf8');
 function evaluate(expression){
  const context={window:{},document:{addEventListener(){}},Set,Image:function(){}};
- vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,state};})();'),context);
+ vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,csvCell,state};})();'),context);
  return vm.runInNewContext(expression,context);
 }
 test('normalizes indexed image filenames regardless of extension and path',()=>{
@@ -24,4 +24,12 @@ test('rejects variant mismatches',()=>{
 });
 test('allows matching number and name for human review',()=>{
  assert.ok(evaluate("__test.matchCandidate({name:'Geralt',number:'1317',variant:''},{title:'Geralt #1317'}).score")>0);
+});
+
+test('CSV quotes and commas are escaped',()=>{
+ assert.equal(evaluate("__test.csvCell('Geralt, \"The Witcher\"')"),'"Geralt, ""The Witcher"""');
+});
+test('CSV cells cannot start spreadsheet formulas',()=>{
+ assert.equal(evaluate("__test.csvCell('=HYPERLINK(\"https://example.com\")')"),'\x22\x27=HYPERLINK(\x22\x22https://example.com\x22\x22)\x22');
+ assert.equal(evaluate("__test.csvCell('  +SUM(1,2)')"),'\x22\x27  +SUM(1,2)\x22');
 });
