@@ -60,7 +60,7 @@ function exportQueue(){
  setStatus('Exported '+rows.length+' Pops for manual image review. No images were downloaded or uploaded.');
 }
 function batchMatch(file,pops){
- if(!/^image\\/(png|jpeg|webp)$/i.test(file.type)||file.size>10*1024*1024||file.size===0)return {pop:null,reason:'Unsupported or oversized image'};
+ if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>10*1024*1024||file.size===0)return {pop:null,reason:'Unsupported or oversized image'};
  const base=normalizeImageName(file.name);
  const exact=pops.filter(p=>normalizeImageName(filename(p))===base);
  if(exact.length===1)return {pop:exact[0],reason:'Exact expected filename'};
@@ -68,7 +68,7 @@ function batchMatch(file,pops){
  const tokens=new Set(base.split(/[^a-z0-9]+/).filter(Boolean));
  // A file that explicitly identifies another figure number must not be
  // attached to a different number just because its character name matches.
- const numbered=[...tokens].filter(t=>/^\\d{2,4}$/.test(t)&&!/^20\\d{2}$/.test(t)&&!/^19\\d{2}$/.test(t));
+ const numbered=[...tokens].filter(t=>t.length>=2&&t.length<=4&&[...t].every(ch=>ch>='0'&&ch<='9')&&!t.startsWith('19')&&!t.startsWith('20'));
  if(numbered.length>1)return {pop:null,reason:'Multiple figure numbers in filename'};
  const numberMatches=pops.filter(p=>p.number&&tokens.has(String(p.number).toLowerCase())&&slug(p.name).toLowerCase().split('-').filter(Boolean).every(t=>tokens.has(t)));
  if(numberMatches.length!==1)return {pop:null,reason:numberMatches.length?'Ambiguous match':'No confident match'};
