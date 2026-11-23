@@ -46,3 +46,13 @@ test('batch rejects ambiguous figure numbers',()=>{
 test('batch refuses missing chase marker for variant',()=>{
  assert.equal(evaluate("__test.batchMatch({name:'Geralt-special-1317.jpg',type:'image/jpeg',size:100},[{id:1,name:'Geralt',number:'1317',variant:'Chase'}]).pop"),null);
 });
+
+test('batch recognizes low figure numbers beginning with 20',()=>{
+ assert.equal(evaluate("__test.batchMatch({name:'Geralt-20.jpg',type:'image/jpeg',size:100},[{id:20,name:'Geralt',number:'20',variant:''}]).pop.id"),20);
+});
+test('batch rejects zero-byte images',()=>{
+ assert.equal(evaluate("__test.batchMatch({name:'Geralt-1317.png',type:'image/png',size:0},[{id:1,name:'Geralt',number:'1317',variant:''}]).pop"),null);
+});
+test('batch rejects images over 10 MB',()=>{
+ assert.equal(evaluate("__test.batchMatch({name:'Geralt-1317.png',type:'image/png',size:10485761},[{id:1,name:'Geralt',number:'1317',variant:''}]).pop"),null);
+});
