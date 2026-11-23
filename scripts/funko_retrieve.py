@@ -197,6 +197,7 @@ def run(args):
     output = []
     review = []
     seen = set()
+    product_cache = {}
     folder = Path(args.download_dir) if args.download_dir else None
     if folder:
         folder.mkdir(parents=True, exist_ok=True)
@@ -224,11 +225,15 @@ def run(args):
                 print(f"Discovery failed {ident}: {exc}")
                 continue
         if not robots.can_fetch(AGENT, url):
+            review.append({"id": ident, "reason": "robots-disallowed", "productUrl": url})
             print(f"Skipping robots-disallowed page for {ident}")
             continue
         try:
-            candidates = extract(retrieve(url, MAX_HTML), url)
+            if url not in product_cache:
+                product_cache[url] = extract(retrieve(url, MAX_HTML), url)
+            candidates = product_cache[url]
             if not candidates:
+                review.append({"id": ident, "reason": "no image metadata", "productUrl": url})
                 print(f"No product image metadata for {ident}")
                 continue
             entry = {"id": ident, "productUrl": url, "imageUrl": candidates[0],
@@ -238,6 +243,7 @@ def run(args):
             output.append(entry)
             print(f"Found {len(candidates)} candidate(s) for {ident}")
         except Exception as exc:
+            review.append({"id": ident, "reason": "product retrieval failed", "productUrl": url, "error": str(exc)[:250]})
             print(f"Failed {ident}: {exc}")
         time.sleep(max(args.delay, 1.0))
     Path(args.output).write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
