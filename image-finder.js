@@ -315,7 +315,7 @@ function officialProductUrl(value){
  try{
   const url=new URL(String(value||'').trim());
   if(url.protocol!=='https:'||url.username||url.password||!['funko.com','www.funko.com'].includes(url.hostname.toLowerCase()))return null;
-  if(!url.pathname.startsWith('/shop/details/'))return null;
+  if(!/^\/[a-z0-9][a-z0-9-]*\/[0-9]+\.html$/i.test(url.pathname))return null;
   return url.href;
  }catch{return null}
 }
@@ -323,7 +323,7 @@ function reviewOfficialProduct(){
  const p=selectedPop();
  if(!p)return setStatus('Select a Pop first.',true);
  const url=officialProductUrl($('finder-official-product')?.value);
- if(!url)return setStatus('Enter an HTTPS Funko.com product-detail URL (not a search page).',true);
+ if(!url)return setStatus('Enter an HTTPS Funko.com product URL ending in /item-number.html.',true);
  const link=$('finder-official-review');
  link.href=url;link.hidden=false;link.textContent='Open official product page for '+p.name+' ↗';
  setStatus('Official product page linked for manual verification. Product photos are not copied or imported automatically.');
