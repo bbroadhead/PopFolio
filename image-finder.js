@@ -67,7 +67,7 @@ function officialProductInput(pops){
 function exportOfficialProductInput(){
  const rows=queue();
  if(!rows.length)return setStatus('No Pops in the current review queue.');
- const blob=new Blob([JSON.stringify(officialProductInput(rows),null,2)+'\\n'],{type:'application/json'});
+ const blob=new Blob([JSON.stringify(officialProductInput(rows),null,2)+'\n'],{type:'application/json'});
  const url=URL.createObjectURL(blob);
  const a=document.createElement('a');a.href=url;a.download='funko-products.json';
  document.body.appendChild(a);a.click();a.remove();
