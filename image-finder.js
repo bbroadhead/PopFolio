@@ -38,6 +38,21 @@ function selectPopChanged(){
  else{$('finder-source-links').replaceChildren();setStatus('Choose a Pop to search for images.')}
 }
 function nextMissing(){const options=queue();if(!options.length)return setStatus('No Pops in the current review queue.');const select=$('finder-pop');const current=options.findIndex(p=>String(p.id)===select.value);const next=options[(current+1)%options.length];select.value=String(next.id);clearSelection();searchLinks(next);setStatus('Reviewing '+next.name+' #'+(next.number||'—')+'. Select Find images or open official Funko search.')}
+function exportQueue(){
+ const rows=queue();
+ if(!rows.length)return setStatus('No Pops in the current review queue.');
+ const cell=value=>'"'+String(value??'').replace(/^[=+@\\t\\r-]/,'\' function filterOptions(){').replace(/"/g,'""')+'"';
+ const header=['ID','Franchise','Name','Number','Variant','Expected filename','Existing image','Official Funko search'];
+ const lines=[header.map(cell).join(',')];
+ for(const p of rows){
+  const q=encodeURIComponent(['Funko Pop',p.name,p.number,p.variant].filter(Boolean).join(' '));
+  lines.push([p.id,p.franchise,p.name,p.number,p.variant,filename(p),p.image||'','https://funko.com/search/?q='+q].map(cell).join(','));
+ }
+ const blob=new Blob(['\\uFEFF'+lines.join('\\r\\n')],{type:'text/csv;charset=utf-8'});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download='popfolio-image-review-queue.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ setStatus('Exported '+rows.length+' Pops for manual image review. No images were downloaded or uploaded.');
+}
 function filterOptions(){const q=String($('finder-pop-filter')?.value||'').toLowerCase();const missingOnly=!!$('finder-missing-only')?.checked;for(const option of $('finder-pop').options){if(!option.value)continue;const p=state.pops.find(x=>String(x.id)===option.value);option.hidden=!option.textContent.toLowerCase().includes(q)||(missingOnly&&p&&!needsImage(p))}}
 function populate(){
  const select=$('finder-pop');if(!select)return;
@@ -246,6 +261,7 @@ function init(){
  $('finder-search').addEventListener('click',search);
  $('finder-pop').addEventListener('change',selectPopChanged);
  $('finder-next')?.addEventListener('click',nextMissing);
+ $('finder-export')?.addEventListener('click',exportQueue);
  $('finder-missing-only')?.addEventListener('change',()=>{updateQueueCount();filterOptions()});
  $('finder-results').addEventListener('click',e=>{const b=e.target.closest('[data-candidate]');if(!b)return;const x=state.candidates[Number(b.dataset.candidate)];if(!x)return;preview(x.workingUrl||x.url,x.source,x.title);$('finder-url').value=x.workingUrl||x.url;$('finder-file').value='';$('finder-source-credit').textContent='Source: '+x.source+(x.license?' · License information: '+x.license:' · Check usage rights on the source page');$('finder-source-credit').dataset.url=x.descriptionUrl||''});
  $('finder-url-preview').addEventListener('click',()=>{state.image=null;const url=$('finder-url').value.trim();if(!/^https:\/\//i.test(url))return setStatus('Enter a secure HTTPS image URL.',true);$('finder-file').value='';preview(url,'URL',url)});
