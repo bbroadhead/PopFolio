@@ -5,7 +5,7 @@ Usage:
   python scripts/funko_retrieve.py --input data/funko-products.json --output funko-candidates.json
   python scripts/funko_retrieve.py --input data/funko-products.json --output funko-candidates.json --download-dir funko-previews
 
-Input: [{"id":"Collection:1","productUrl":"https://funko.com/pop-name/12345.html"}]
+Input: data/pops.json directly, or an array of records with id/name/number/variant.\nProduct URLs are optional: missing links are discovered from Funko search.
 The default mode only reads public product pages and records image URLs. --download-dir
 downloads preview files locally, never commits them or modifies collection records.
 Only download/store/reuse images if you have the appropriate rights.
@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 import re
 import time
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, urlencode
 from urllib.request import Request, urlopen
 from urllib.robotparser import RobotFileParser
 
@@ -99,6 +99,60 @@ def extract(html_text, page_url):
     return urls
 
 
+class SearchLinks(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.links = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "a":
+            return
+        href = dict(attrs).get("href", "")
+        if href:
+            self.links.append(href)
+
+
+def product_score(item, url):
+    """Conservative URL-slug ranking; box number is NOT encoded in the product URL."""
+    if not official_url(url):
+        return 0
+    slug = urlparse(url).path.strip("/").split("/")[0].replace("-", " ").lower()
+    name = set(re.findall(r"[a-z0-9]+", str(item.get("name") or "").lower()))
+    name -= {"pop", "funko", "the", "and", "with", "of", "a"}
+    title = set(re.findall(r"[a-z0-9]+", slug))
+    if not name or len(name & title) / len(name) < 0.75:
+        return 0
+    variant = str(item.get("variant") or "").lower()
+    critical = {"chase", "flocked", "diamond", "metallic", "glow", "blacklight"}
+    expected = {v for v in critical if v in variant}
+    found = {v for v in critical if v in title}
+    if expected != found:
+        return 0
+    return len(name & title) / len(name)
+
+
+def discover(item, robots):
+    """Discover likely official product pages from the public Funko search page."""
+    query = " ".join(str(item.get(k) or "") for k in ("name", "number", "variant")).strip()
+    if not query:
+        return []
+    url = "https://funko.com/search/?" + urlencode({"term": query})
+    if not robots.can_fetch(AGENT, url):
+        return []
+    req = Request(url, headers={"User-Agent": AGENT, "Accept": "text/html"})
+    with urlopen(req, timeout=20) as response:
+        if urlparse(response.geturl()).hostname not in ("funko.com", "www.funko.com"):
+            return []
+        data = response.read(MAX_HTML + 1)
+        if len(data) > MAX_HTML:
+            return []
+    parser = SearchLinks()
+    parser.feed(data.decode("utf-8", errors="replace"))
+    urls = list(dict.fromkeys(urljoin(url, html.unescape(h)) for h in parser.links))
+    ranked = sorted(((product_score(item, u), u) for u in urls), reverse=True)
+    return [u for score, u in ranked if score >= 0.75][:5]
+
+
 def retrieve(url, limit):
     req = Request(url, headers={"User-Agent": AGENT, "Accept": "text/html,application/xhtml+xml"})
     with urlopen(req, timeout=20) as response:
@@ -133,6 +187,8 @@ def download_preview(url, dest):
 
 def run(args):
     records = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    if isinstance(records, dict):
+        records = records.get("items", [])
     if not isinstance(records, list) or len(records) > 1000:
         raise ValueError("Input must be an array of at most 1,000 product records")
     robots = RobotFileParser()
@@ -146,10 +202,24 @@ def run(args):
     for i, item in enumerate(records):
         ident = str(item.get("id", "")).strip()
         url = item.get("productUrl", "")
-        if not ident or ident in seen or not official_url(url):
+        if not ident or ident in seen:
             print(f"Skipping invalid or duplicate entry {i + 1}")
             continue
         seen.add(ident)
+        if not args.include_existing and item.get("image"):
+            continue
+        if not official_url(url):
+            try:
+                matches = discover(item, robots)
+                if len(matches) != 1:
+                    print(f"Needs review {ident}: {len(matches)} possible official pages")
+                    time.sleep(max(args.delay, 1.0))
+                    continue
+                url = matches[0]
+                time.sleep(max(args.delay, 1.0))
+            except Exception as exc:
+                print(f"Discovery failed {ident}: {exc}")
+                continue
         if not robots.can_fetch(AGENT, url):
             print(f"Skipping robots-disallowed page for {ident}")
             continue
@@ -177,4 +247,5 @@ if __name__ == "__main__":
     parser.add_argument("--output", default="funko-candidates.json")
     parser.add_argument("--download-dir", help="Opt-in local image downloads; never committed automatically")
     parser.add_argument("--delay", type=float, default=2.0)
+    parser.add_argument("--include-existing", action="store_true", help="Include collection entries that already have an image")
     run(parser.parse_args())
