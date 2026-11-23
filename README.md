@@ -139,3 +139,7 @@ python scripts/funko_retrieve.py --input data/pops.json --output funko-test-cand
 ```
 
 Use `--start 10 --limit 10` to test the next ten entries. Review `funko-test-candidates.json` and `funko-test-candidates-review.json` before scaling up. The first entries may have uncommon/retired Funko variants; zero matches do not necessarily indicate a parser failure. Live Funko.com compatibility has not yet been verified.
+
+### Launch a ten-entry discovery test from PopFolio (including mobile)
+
+Open Image Finder and enter a fine-grained GitHub token in the existing token field. To trigger the test, the token needs **Actions: Read and write** access to `bbroadhead/PopFolio` (the usual image upload token with Contents-only permissions is insufficient). Set the **Test start index** to 0, then select **Run 10-entry Funko test**. GitHub Actions runs the Python discovery script on its own runner, so your computer need not be on. Use **View test results in GitHub Actions** to read the job summary and download the two JSON reports from the run's artifacts. The test does not upload product images or modify your collection. Never share or commit the token. The button only requests a run; successful catalog retrieval still depends on Funko.com access and robots restrictions.
