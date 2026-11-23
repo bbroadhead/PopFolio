@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slug=s=>String(s||'').normalize('NFKD').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,110);
-const state={pops:[],selected:null,candidates:[],image:null,token:'',license:'',searchId:0,previewId:0,savedFiles:new Set()};
+const state={pops:[],selected:null,candidates:[],image:null,token:'',license:'',searchId:0,previewId:0,savedFiles:new Set(),batch:[],batchBusy:false};
 const api='https://api.github.com/repos/bbroadhead/PopFolio/contents/';
 const filename=p=>slug(p.name)+'-'+slug(p.number)+(p.variant?'-'+slug(p.variant).slice(0,38):'')+'.png';
 const normalizeImageName=value=>String(value||'').split('/').pop().replace(/\.[^.]+$/,'').toLowerCase();
@@ -79,10 +79,15 @@ function batchMatch(file,pops){
  return {pop,reason:'Name and number matched'};
 }
 function reviewBatch(){
+ if(state.batchBusy)return setStatus('Wait for the current batch upload to finish.',true);
+ state.batch=[];
+ $('finder-bulk-upload').disabled=true;
+ $('finder-bulk-progress').textContent='';
  const files=[...($('finder-bulk-files')?.files||[])];
  const root=$('finder-bulk-results');root.replaceChildren();
  if(!files.length)return setStatus('Choose image files for batch review first.',true);
- const matches=files.map(file=>({file,...batchMatch(file,state.pops)}));
+ const matches=files.map(file=>({file,...batchMatch(file,state.pops),approved:false}));
+ state.batch=matches;
  const counts=new Map();
  for(const item of matches)if(item.pop)counts.set(String(item.pop.id),(counts.get(String(item.pop.id))||0)+1);
  for(const item of matches){
@@ -110,9 +115,63 @@ function reviewBatch(){
    preview(URL.createObjectURL(item.file),'Local file',item.file.name,item.file);
    setStatus('Verify the selected Pop, exact variant, and image rights before saving.');
   });
-  row.append(label,select,button);root.append(row);
+  const approve=document.createElement('button');approve.type='button';approve.textContent='Approve for batch';approve.disabled=true;
+  select.addEventListener('change',()=>{item.approved=false;approve.disabled=true;approve.textContent='Approve for batch';$('finder-bulk-upload').disabled=!state.batch.some(x=>x.approved)});
+  button.addEventListener('click',()=>{
+   const pop=state.pops.find(p=>String(p.id)===select.value);
+   if(!pop)return;
+   item.approved=false;approve.disabled=false;approve.textContent='Approve for batch';
+  });
+  approve.addEventListener('click',()=>{
+   const pop=state.pops.find(p=>String(p.id)===select.value);
+   if(!pop||!needsImage(pop))return setStatus('Batch uploads skip Pops with existing images. Use individual save to replace one.',true);
+   if(!state.image||state.image.file!==item.file||String(selectedPop()?.id)!==String(pop.id))return setStatus('Preview this exact image and Pop again before approval.',true);
+   if(!$('finder-rights').checked)return setStatus('Confirm you have permission to store and republish this image first.',true);
+   item.pop=pop;item.approved=true;approve.disabled=true;approve.textContent='Approved';
+   $('finder-bulk-upload').disabled=false;
+  });
+  row.append(label,select,button,approve);root.append(row);
  }
  setStatus('Prepared '+files.length+' local images. Review and correct each match; no images were uploaded.');
+}
+
+
+async function uploadBatch(){
+ if(state.batchBusy)return;
+ const items=state.batch.filter(x=>x.approved);
+ if(!items.length)return setStatus('Review and approve at least one image first.',true);
+ if(!$('finder-rights').checked)return setStatus('Confirm image reuse rights before uploading.',true);
+ const token=$('finder-token').value.trim();
+ if(!token)return setStatus('Enter your GitHub token before uploading.',true);
+ if(new Set(items.map(x=>String(x.pop.id))).size!==items.length)return setStatus('Duplicate Pop assignments in approved batch. Correct them before uploading.',true);
+ if(!confirm('Upload '+items.length+' individually approved images? Existing images will be skipped.'))return;
+ state.batchBusy=true;state.token=token;
+ $('finder-bulk-upload').disabled=true;$('finder-bulk-review').disabled=true;
+ let uploaded=0,skipped=0,failed=0;
+ try{
+  for(let i=0;i<items.length;i++){
+   const item=items[i],p=item.pop,name=filename(p),path='assets/pop_images/'+encodeURIComponent(name);
+   const progress=$('finder-bulk-progress');
+   progress.textContent='Processing '+(i+1)+'/'+items.length+': '+name+' (uploaded '+uploaded+', skipped '+skipped+', failed '+failed+')';
+   try{
+    if(!needsImage(p)){skipped++;continue}
+    const existing=await gh(path,'GET');
+    if(existing){skipped++;continue}
+    const png=await toPng(item.file);
+    await gh(path,'PUT',{message:'Add approved Pop image for '+p.name+' #'+p.number,content:await bytesBase64(png),branch:'main'});
+    p.image='assets/pop_images/'+name;state.savedFiles.add(name);item.approved=false;
+    window.dispatchEvent(new CustomEvent('popfolio-image-uploaded',{detail:{id:p.id,file:name}}));
+    uploaded++;
+   }catch(e){failed++;item.error=e.message}
+  }
+  updateQueueCount();filterOptions();
+  $('finder-bulk-progress').textContent='Finished: '+uploaded+' uploaded, '+skipped+' skipped, '+failed+' failed. Failed approvals remain available to retry.';
+  setStatus('Batch finished. The repository image index will update after GitHub Actions runs.',failed>0);
+ }finally{
+  state.batchBusy=false;state.token='';$('finder-token').value='';
+  $('finder-bulk-review').disabled=false;
+  $('finder-bulk-upload').disabled=!state.batch.some(x=>x.approved);
+ }
 }
 
 function filterOptions(){const q=String($('finder-pop-filter')?.value||'').toLowerCase();const missingOnly=!!$('finder-missing-only')?.checked;for(const option of $('finder-pop').options){if(!option.value)continue;const p=state.pops.find(x=>String(x.id)===option.value);option.hidden=!option.textContent.toLowerCase().includes(q)||(missingOnly&&p&&!needsImage(p))}}
@@ -325,6 +384,7 @@ function init(){
  $('finder-next')?.addEventListener('click',nextMissing);
  $('finder-export')?.addEventListener('click',exportQueue);
  $('finder-bulk-review')?.addEventListener('click',reviewBatch);
+ $('finder-bulk-upload')?.addEventListener('click',uploadBatch);
  $('finder-missing-only')?.addEventListener('change',()=>{updateQueueCount();filterOptions()});
  $('finder-results').addEventListener('click',e=>{const b=e.target.closest('[data-candidate]');if(!b)return;const x=state.candidates[Number(b.dataset.candidate)];if(!x)return;preview(x.workingUrl||x.url,x.source,x.title);$('finder-url').value=x.workingUrl||x.url;$('finder-file').value='';$('finder-source-credit').textContent='Source: '+x.source+(x.license?' · License information: '+x.license:' · Check usage rights on the source page');$('finder-source-credit').dataset.url=x.descriptionUrl||''});
  $('finder-url-preview').addEventListener('click',()=>{state.image=null;const url=$('finder-url').value.trim();if(!/^https:\/\//i.test(url))return setStatus('Enter a secure HTTPS image URL.',true);$('finder-file').value='';preview(url,'URL',url)});
