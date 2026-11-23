@@ -7,11 +7,16 @@ const api='https://api.github.com/repos/bbroadhead/PopFolio/contents/';
 const filename=p=>slug(p.name)+'-'+slug(p.number)+(p.variant?'-'+slug(p.variant).slice(0,38):'')+'.png';
 const setStatus=(message,error=false)=>{const el=$('finder-status');if(el){el.textContent=message;el.classList.toggle('finder-error',error)}};
 function selectedPop(){return state.pops.find(p=>String(p.id)===String($('finder-pop')?.value))}
+function needsImage(p){return !p.image || !String(p.image).trim()}
+function queue(){return state.pops.filter(p=>!$('finder-missing-only')?.checked||needsImage(p))}
+function updateQueueCount(){const el=$('finder-queue-count');if(el)el.textContent=state.pops.filter(needsImage).length+' Pops without images · '+queue().length+' in review queue'}
+function nextMissing(){const options=queue();if(!options.length)return setStatus('No Pops in the current review queue.');const select=$('finder-pop');const current=options.findIndex(p=>String(p.id)===select.value);const next=options[(current+1)%options.length];select.value=String(next.id);state.searchId++;state.image=null;showCandidates([]);$('finder-preview').hidden=true;$('finder-selected').textContent='';searchLinks(next);setStatus('Reviewing '+next.name+' #'+(next.number||'—')+'. Select Find images or open official Funko search.')}
 function populate(){
  const select=$('finder-pop');if(!select)return;
  const current=select.value;
  select.innerHTML='<option value="">Select a Pop…</option>'+state.pops.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.franchise+' · '+p.name+' #'+(p.number||'—')+' · '+(p.variant||'Standard'))+'</option>').join('');
  if(state.pops.some(p=>String(p.id)===current))select.value=current;
+ updateQueueCount();
 }
 function setPops(pops){state.pops=Array.isArray(pops)?pops:[];populate()}
 function originalWikiUrls(url){
@@ -175,7 +180,7 @@ async function save(){
   if(existing&&!confirm('An image named '+name+' already exists. Replace it?'))return setStatus('Save canceled.');
   setStatus('Uploading '+name+' to GitHub…');
   await gh(path,'PUT',{message:'Add reviewed Pop image for '+p.name+' #'+p.number,content:await bytesBase64(png),branch:'main',...(existing?{sha:existing.sha}:{})});
-  window.dispatchEvent(new CustomEvent('popfolio-image-uploaded',{detail:{id:p.id,file:name}}));
+  p.image='assets/pop_images/'+name;updateQueueCount();window.dispatchEvent(new CustomEvent('popfolio-image-uploaded',{detail:{id:p.id,file:name}}));
   setStatus('Saved '+name+' to GitHub. The Pop image has been updated in this session; the GitHub Action will update the persistent image index shortly.');
  }catch(e){setStatus('Could not save: '+e.message+'. If this is a cross-origin restriction, download the image and use the local file picker instead.',true)}
  finally{$('finder-save').disabled=false;state.token='';$('finder-token').value=''}
@@ -183,11 +188,13 @@ async function save(){
 function init(){
  const root=$('image-finder');if(!root)return;
  $('finder-search').addEventListener('click',search);
+ $('finder-next')?.addEventListener('click',nextMissing);
+ $('finder-missing-only')?.addEventListener('change',updateQueueCount);
  $('finder-results').addEventListener('click',e=>{const b=e.target.closest('[data-candidate]');if(!b)return;const x=state.candidates[Number(b.dataset.candidate)];if(!x)return;preview(x.workingUrl||x.url,x.source,x.title);$('finder-url').value=x.workingUrl||x.url;$('finder-file').value='';$('finder-source-credit').textContent='Source: '+x.source+(x.license?' · License information: '+x.license:' · Check usage rights on the source page');$('finder-source-credit').dataset.url=x.descriptionUrl||''});
  $('finder-url-preview').addEventListener('click',()=>{const url=$('finder-url').value.trim();if(!/^https:\/\//i.test(url))return setStatus('Enter a secure HTTPS image URL.',true);$('finder-file').value='';preview(url,'URL',url)});
  $('finder-file').addEventListener('change',()=>{const f=$('finder-file').files[0];if(!f)return;preview(URL.createObjectURL(f),'Local file',f.name)});
  $('finder-save').addEventListener('click',save);
- $('finder-pop-filter').addEventListener('input',e=>{const q=e.target.value.toLowerCase();const select=$('finder-pop');for(const option of select.options)option.hidden=!!option.value&&!option.textContent.toLowerCase().includes(q)});
+ $('finder-pop-filter').addEventListener('input',e=>{const q=e.target.value.toLowerCase();const select=$('finder-pop');for(const option of select.options)option.hidden=!!option.value&&(!option.textContent.toLowerCase().includes(q)||($('finder-missing-only')?.checked&&!needsImage(state.pops.find(p=>String(p.id)===option.value)||{})))});
 }
 document.addEventListener('DOMContentLoaded',init);
 window.PopFolioImageFinder={setPops};
