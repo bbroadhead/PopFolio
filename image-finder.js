@@ -5,14 +5,15 @@ const slug=s=>String(s||'').normalize('NFKD').replace(/[^a-zA-Z0-9]+/g,'-').repl
 const state={pops:[],selected:null,candidates:[],image:null,token:'',license:'',searchId:0,previewId:0,savedFiles:new Set()};
 const api='https://api.github.com/repos/bbroadhead/PopFolio/contents/';
 const filename=p=>slug(p.name)+'-'+slug(p.number)+(p.variant?'-'+slug(p.variant).slice(0,38):'')+'.png';
+const normalizeImageName=value=>String(value||'').split('/').pop().replace(/\\.[^.]+$/,'').toLowerCase();
+const existingImageNames=()=>new Set([...state.savedFiles].map(normalizeImageName));
 const setStatus=(message,error=false)=>{const el=$('finder-status');if(el){el.textContent=message;el.classList.toggle('finder-error',error)}};
 function selectedPop(){return state.pops.find(p=>String(p.id)===String($('finder-pop')?.value))}
 function needsImage(p){
  if(p.image&&String(p.image).trim())return false;
  // Image indexing is asynchronous; do not re-queue an image already saved
  // under its deterministic local filename.
- const expected=filename(p).replace(/\.png$/i,'').toLowerCase();
- return ![...state.savedFiles].some(file=>String(file).replace(/\.[^.]+$/,'').toLowerCase()===expected);
+ return !existingImageNames().has(normalizeImageName(filename(p)));
 }
 function queue(){return state.pops.filter(p=>!$('finder-missing-only')?.checked||needsImage(p))}
 function updateQueueCount(){const el=$('finder-queue-count');if(el)el.textContent=state.pops.filter(needsImage).length+' Pops without images · '+queue().length+' in review queue'}
@@ -227,6 +228,10 @@ async function save(){
   const png=await toPng(blob);
   const name=filename(p),path='assets/pop_images/'+encodeURIComponent(name);
   const existing=await gh(path,'GET');
+  // The index can contain a JPEG/JPG for this same figure. Never silently
+  // add a competing PNG and make display precedence ambiguous.
+  const conflicts=[...state.savedFiles].filter(file=>normalizeImageName(file)===normalizeImageName(name)&&file.toLowerCase()!==name.toLowerCase());
+  if(conflicts.length&&!confirm('A different image file already exists for this Pop: '+conflicts.join(', ')+'. Saving will add a PNG alongside it, not remove the original. Continue?'))return setStatus('Save canceled; existing image preserved.');
   if(existing&&!confirm('An image named '+name+' already exists. Replace it?'))return setStatus('Save canceled.');
   setStatus('Uploading '+name+' to GitHub…');
   await gh(path,'PUT',{message:'Add reviewed Pop image for '+p.name+' #'+p.number,content:await bytesBase64(png),branch:'main',...(existing?{sha:existing.sha}:{})});
