@@ -4,11 +4,13 @@ on:
   push:
     paths:
       - 'image-finder.js'
+      - 'index.html'
       - 'tests/image-finder.test.cjs'
       - '.github/workflows/image-finder-tests.yml'
   pull_request:
     paths:
       - 'image-finder.js'
+      - 'index.html'
       - 'tests/image-finder.test.cjs'
       - '.github/workflows/image-finder-tests.yml'
   workflow_dispatch:
