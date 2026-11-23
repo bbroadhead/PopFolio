@@ -61,6 +61,19 @@ function exportQueue(){
  const a=document.createElement('a');a.href=url;a.download='popfolio-image-review-queue.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  setStatus('Exported '+rows.length+' Pops for manual image review. No images were downloaded or uploaded.');
 }
+function officialProductInput(pops){
+ return pops.map(p=>({id:String(p.id),name:String(p.name||''),number:String(p.number||''),variant:String(p.variant||''),productUrl:''}));
+}
+function exportOfficialProductInput(){
+ const rows=queue();
+ if(!rows.length)return setStatus('No Pops in the current review queue.');
+ const blob=new Blob([JSON.stringify(officialProductInput(rows),null,2)+'\\n'],{type:'application/json'});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download='funko-products.json';
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+ setStatus('Exported '+rows.length+' collection entries. Add verified official Funko product URLs to productUrl, then run scripts/funko_retrieve.py. No images were downloaded.');
+}
 function batchMatch(file,pops){
  if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>10*1024*1024||file.size===0)return {pop:null,reason:'Unsupported or oversized image'};
  const base=normalizeImageName(file.name);
@@ -481,6 +494,7 @@ function init(){
  $('finder-pop').addEventListener('change',selectPopChanged);
  $('finder-next')?.addEventListener('click',nextMissing);
  $('finder-export')?.addEventListener('click',exportQueue);
+ $('finder-funko-export')?.addEventListener('click',exportOfficialProductInput);
  $('finder-bulk-review')?.addEventListener('click',reviewBatch);
  $('finder-bulk-upload')?.addEventListener('click',uploadBatch);
  $('finder-missing-only')?.addEventListener('change',()=>{updateQueueCount();filterOptions()});
