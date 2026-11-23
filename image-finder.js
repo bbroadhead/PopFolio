@@ -38,10 +38,16 @@ function selectPopChanged(){
  else{$('finder-source-links').replaceChildren();setStatus('Choose a Pop to search for images.')}
 }
 function nextMissing(){const options=queue();if(!options.length)return setStatus('No Pops in the current review queue.');const select=$('finder-pop');const current=options.findIndex(p=>String(p.id)===select.value);const next=options[(current+1)%options.length];select.value=String(next.id);clearSelection();searchLinks(next);setStatus('Reviewing '+next.name+' #'+(next.number||'—')+'. Select Find images or open official Funko search.')}
+// Escape cells and neutralize spreadsheet formula injection, including leading whitespace.
+function csvCell(value){
+ const raw=String(value??'');
+ const safe=/^[\\s]*[=+@-]/.test(raw)?"'"+raw:raw;
+ return '"'+safe.replace(/"/g,'""')+'"';
+}
 function exportQueue(){
  const rows=queue();
  if(!rows.length)return setStatus('No Pops in the current review queue.');
- const cell=value=>'"'+String(value??'').replace(/^[=+@\t\r-]/,match=>"'"+match).replace(/"/g,'""')+'"';
+ const cell=csvCell;
  const header=['ID','Franchise','Name','Number','Variant','Expected filename','Existing image','Official Funko search'];
  const lines=[header.map(cell).join(',')];
  for(const p of rows){
