@@ -2,12 +2,17 @@
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slug=s=>String(s||'').normalize('NFKD').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,110);
-const state={pops:[],selected:null,candidates:[],image:null,token:'',license:'',searchId:0,previewId:0};
+const state={pops:[],selected:null,candidates:[],image:null,token:'',license:'',searchId:0,previewId:0,savedFiles:new Set()};
 const api='https://api.github.com/repos/bbroadhead/PopFolio/contents/';
 const filename=p=>slug(p.name)+'-'+slug(p.number)+(p.variant?'-'+slug(p.variant).slice(0,38):'')+'.png';
 const setStatus=(message,error=false)=>{const el=$('finder-status');if(el){el.textContent=message;el.classList.toggle('finder-error',error)}};
 function selectedPop(){return state.pops.find(p=>String(p.id)===String($('finder-pop')?.value))}
-function needsImage(p){return !p.image || !String(p.image).trim()}
+function needsImage(p){
+ if(p.image&&String(p.image).trim())return false;
+ // Image indexing is asynchronous; do not re-queue an image already saved
+ // under its deterministic local filename.
+ return !state.savedFiles.has(filename(p));
+}
 function queue(){return state.pops.filter(p=>!$('finder-missing-only')?.checked||needsImage(p))}
 function updateQueueCount(){const el=$('finder-queue-count');if(el)el.textContent=state.pops.filter(needsImage).length+' Pops without images · '+queue().length+' in review queue'}
 function clearSelection(){
@@ -205,7 +210,7 @@ async function save(){
   if(existing&&!confirm('An image named '+name+' already exists. Replace it?'))return setStatus('Save canceled.');
   setStatus('Uploading '+name+' to GitHub…');
   await gh(path,'PUT',{message:'Add reviewed Pop image for '+p.name+' #'+p.number,content:await bytesBase64(png),branch:'main',...(existing?{sha:existing.sha}:{})});
-  p.image='assets/pop_images/'+name;updateQueueCount();filterOptions();window.dispatchEvent(new CustomEvent('popfolio-image-uploaded',{detail:{id:p.id,file:name}}));
+  p.image='assets/pop_images/'+name;state.savedFiles.add(name);updateQueueCount();filterOptions();window.dispatchEvent(new CustomEvent('popfolio-image-uploaded',{detail:{id:p.id,file:name}}));
   setStatus('Saved '+name+' to GitHub. The Pop image has been updated in this session; the GitHub Action will update the persistent image index shortly.');
  }catch(e){setStatus('Could not save: '+e.message+'. If this is a cross-origin restriction, download the image and use the local file picker instead.',true)}
  finally{$('finder-save').disabled=false;state.token='';$('finder-token').value=''}
