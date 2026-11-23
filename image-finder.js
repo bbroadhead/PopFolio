@@ -88,7 +88,7 @@ async function resolveCandidate(x){
  for(const url of [...new Set(urls)])if(await imageLoads(url))return {...x,thumb:url,workingUrl:url};
  return null;
 }
-async function preview(url,source,description){
+async function preview(url,source,description,file=null){
  const previewId=++state.previewId;
  state.image=null;
  $('finder-preview').hidden=true;
@@ -101,7 +101,7 @@ async function preview(url,source,description){
   setStatus('This image URL does not load. The source may have removed or blocked the image. Choose another candidate or upload a downloaded file.',true);
   return;
  }
- state.image={url,source,description};
+ state.image={url,source,description,file};
  $('finder-preview').src=url;
  $('finder-preview').hidden=false;
  $('finder-selected').textContent='Selected: '+description;
@@ -209,6 +209,7 @@ async function save(){
  // A pasted URL must be previewed for this Pop before it can be saved.
  // This also prevents a URL edited after preview from silently changing the upload.
  if(!file&&(!state.image||state.image.url!==url))return setStatus('Preview the current image URL before saving it.',true);
+ if(file&&(!state.image||state.image.source!=='Local file'||state.image.file!==file))return setStatus('Wait for the selected local file to finish previewing before saving.',true);
  if(!p||(!file&&!url))return setStatus('Select a Pop and an image first.',true);
  if(!$('finder-rights').checked)return setStatus('Confirm you have permission to store and republish this image.',true);
  state.token=$('finder-token').value.trim();
@@ -243,7 +244,7 @@ function init(){
  $('finder-missing-only')?.addEventListener('change',()=>{updateQueueCount();filterOptions()});
  $('finder-results').addEventListener('click',e=>{const b=e.target.closest('[data-candidate]');if(!b)return;const x=state.candidates[Number(b.dataset.candidate)];if(!x)return;preview(x.workingUrl||x.url,x.source,x.title);$('finder-url').value=x.workingUrl||x.url;$('finder-file').value='';$('finder-source-credit').textContent='Source: '+x.source+(x.license?' · License information: '+x.license:' · Check usage rights on the source page');$('finder-source-credit').dataset.url=x.descriptionUrl||''});
  $('finder-url-preview').addEventListener('click',()=>{state.image=null;const url=$('finder-url').value.trim();if(!/^https:\/\//i.test(url))return setStatus('Enter a secure HTTPS image URL.',true);$('finder-file').value='';preview(url,'URL',url)});
- $('finder-file').addEventListener('change',()=>{const f=$('finder-file').files[0];if(!f)return;preview(URL.createObjectURL(f),'Local file',f.name)});
+ $('finder-file').addEventListener('change',()=>{const f=$('finder-file').files[0];if(!f)return;preview(URL.createObjectURL(f),'Local file',f.name,f)});
  $('finder-save').addEventListener('click',save);
  $('finder-pop-filter').addEventListener('input',filterOptions);
 }
