@@ -23,6 +23,8 @@ function clearSelection(){
  state.image=null;
  state.candidates=[];
  $('finder-results').replaceChildren();
+ if($('finder-official-review')){$('finder-official-review').hidden=true;$('finder-official-review').removeAttribute('href')}
+ if($('finder-official-product'))$('finder-official-product').value='';
  $('finder-preview').hidden=true;
  $('finder-preview').removeAttribute('src');
  $('finder-selected').textContent='';
@@ -52,7 +54,7 @@ function exportQueue(){
  const lines=[header.map(cell).join(',')];
  for(const p of rows){
   const q=encodeURIComponent(['Funko Pop',p.name,p.number,p.variant].filter(Boolean).join(' '));
-  lines.push([p.id,p.franchise,p.name,p.number,p.variant,filename(p),p.image||'','https://funko.com/search/?q='+q].map(cell).join(','));
+  lines.push([p.id,p.franchise,p.name,p.number,p.variant,filename(p),p.image||'','https://funko.com/search/?term='+q].map(cell).join(','));
  }
  const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
  const url=URL.createObjectURL(blob);
@@ -309,9 +311,26 @@ async function fandomSearch(p){
  }
  return [...seen.values()].slice(0,24);
 }
+function officialProductUrl(value){
+ try{
+  const url=new URL(String(value||'').trim());
+  if(url.protocol!=='https:'||url.username||url.password||!['funko.com','www.funko.com'].includes(url.hostname.toLowerCase()))return null;
+  if(!url.pathname.startsWith('/shop/details/'))return null;
+  return url.href;
+ }catch{return null}
+}
+function reviewOfficialProduct(){
+ const p=selectedPop();
+ if(!p)return setStatus('Select a Pop first.',true);
+ const url=officialProductUrl($('finder-official-product')?.value);
+ if(!url)return setStatus('Enter an HTTPS Funko.com product-detail URL (not a search page).',true);
+ const link=$('finder-official-review');
+ link.href=url;link.hidden=false;link.textContent='Open official product page for '+p.name+' ↗';
+ setStatus('Official product page linked for manual verification. Product photos are not copied or imported automatically.');
+}
 function searchLinks(p){
  const q=encodeURIComponent(['Funko Pop',p.name,p.number,p.variant].filter(Boolean).join(' '));
- $('finder-source-links').innerHTML='<a href="https://funko.com/search/?q='+q+'" target="_blank" rel="noopener">Search official Funko catalog ↗</a> <a href="https://funko.fandom.com/wiki/Special:Search?query='+q+'" target="_blank" rel="noopener">Search Funko Wiki ↗</a> <a href="https://www.popcultcha.com.au/catalogsearch/result/?q='+q+'" target="_blank" rel="noopener">Search Popcultcha ↗</a>';
+ $('finder-source-links').innerHTML='<a href="https://funko.com/search/?term='+q+'" target="_blank" rel="noopener">Search official Funko catalog ↗</a> <a href="https://funko.fandom.com/wiki/Special:Search?query='+q+'" target="_blank" rel="noopener">Search Funko Wiki ↗</a> <a href="https://www.popcultcha.com.au/catalogsearch/result/?q='+q+'" target="_blank" rel="noopener">Search Popcultcha ↗</a>';
 }
 async function search(){
  const p=selectedPop();if(!p){setStatus('Select a Pop first.',true);return}
@@ -385,6 +404,7 @@ function init(){
  const root=$('image-finder');if(!root)return;
  loadIndexedImages();
  $('finder-search').addEventListener('click',search);
+ $('finder-official-check')?.addEventListener('click',reviewOfficialProduct);
  $('finder-pop').addEventListener('change',selectPopChanged);
  $('finder-next')?.addEventListener('click',nextMissing);
  $('finder-export')?.addEventListener('click',exportQueue);
