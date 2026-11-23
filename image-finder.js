@@ -59,6 +59,41 @@ function exportQueue(){
  const a=document.createElement('a');a.href=url;a.download='popfolio-image-review-queue.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  setStatus('Exported '+rows.length+' Pops for manual image review. No images were downloaded or uploaded.');
 }
+function batchMatch(file,pops){
+ const base=normalizeImageName(file.name);
+ const exact=pops.filter(p=>normalizeImageName(filename(p))===base);
+ if(exact.length===1)return {pop:exact[0],reason:'Exact expected filename'};
+ if(exact.length>1)return {pop:null,reason:'Ambiguous filename'};
+ const tokens=new Set(base.split(/[^a-z0-9]+/).filter(Boolean));
+ const numberMatches=pops.filter(p=>p.number&&tokens.has(String(p.number).toLowerCase())&&slug(p.name).toLowerCase().split('-').filter(Boolean).every(t=>tokens.has(t)));
+ return numberMatches.length===1?{pop:numberMatches[0],reason:'Name and number matched'}:{pop:null,reason:numberMatches.length?'Ambiguous match':'No confident match'};
+}
+function reviewBatch(){
+ const files=[...($('finder-bulk-files')?.files||[])];
+ const root=$('finder-bulk-results');root.replaceChildren();
+ if(!files.length)return setStatus('Choose image files for batch review first.',true);
+ for(const file of files){
+  const result=batchMatch(file,state.pops);
+  const row=document.createElement('div');row.className='finder-bulk-row';
+  const label=document.createElement('span');
+  label.textContent=file.name+' — '+(result.pop?result.pop.name+' #'+(result.pop.number||'—'):'Unmatched')+' ('+result.reason+')';
+  row.append(label);
+  if(result.pop){
+   const button=document.createElement('button');button.type='button';button.textContent='Review this image';
+   button.addEventListener('click',()=>{
+    $('finder-pop').value=String(result.pop.id);selectPopChanged();
+    // FileList is read-only: preview this batch file and keep it as the
+    // selected upload without altering the user's original batch selection.
+    const dt=new DataTransfer();dt.items.add(file);$('finder-file').files=dt.files;
+    preview(URL.createObjectURL(file),'Local file',file.name,file);
+    setStatus('Review the image and confirm reuse rights before uploading.');
+   });
+   row.append(button);
+  }
+  root.append(row);
+ }
+ setStatus('Matched '+files.length+' local files for individual review. No files have been uploaded.');
+}
 function filterOptions(){const q=String($('finder-pop-filter')?.value||'').toLowerCase();const missingOnly=!!$('finder-missing-only')?.checked;for(const option of $('finder-pop').options){if(!option.value)continue;const p=state.pops.find(x=>String(x.id)===option.value);option.hidden=!option.textContent.toLowerCase().includes(q)||(missingOnly&&p&&!needsImage(p))}}
 function populate(){
  const select=$('finder-pop');if(!select)return;
@@ -268,6 +303,7 @@ function init(){
  $('finder-pop').addEventListener('change',selectPopChanged);
  $('finder-next')?.addEventListener('click',nextMissing);
  $('finder-export')?.addEventListener('click',exportQueue);
+ $('finder-bulk-review')?.addEventListener('click',reviewBatch);
  $('finder-missing-only')?.addEventListener('change',()=>{updateQueueCount();filterOptions()});
  $('finder-results').addEventListener('click',e=>{const b=e.target.closest('[data-candidate]');if(!b)return;const x=state.candidates[Number(b.dataset.candidate)];if(!x)return;preview(x.workingUrl||x.url,x.source,x.title);$('finder-url').value=x.workingUrl||x.url;$('finder-file').value='';$('finder-source-credit').textContent='Source: '+x.source+(x.license?' · License information: '+x.license:' · Check usage rights on the source page');$('finder-source-credit').dataset.url=x.descriptionUrl||''});
  $('finder-url-preview').addEventListener('click',()=>{state.image=null;const url=$('finder-url').value.trim();if(!/^https:\/\//i.test(url))return setStatus('Enter a secure HTTPS image URL.',true);$('finder-file').value='';preview(url,'URL',url)});
