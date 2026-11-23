@@ -66,6 +66,8 @@ The review queue consults the Pop's image field and the existing image filename 
 
 ### Reviewed local-image batch upload
 
-Select multiple PNG/JPEG/WebP files in the Image Finder, click **Review batch matches**, and correct any ambiguous assignments with the per-file Pop dropdown. For each image, click **Review selected image**, inspect the preview and exact edition, confirm reuse rights, then click **Approve for batch**. Enter a GitHub fine-grained token and select **Upload approved images (skip existing)**. Confirm the final upload count.
+Select multiple PNG/JPEG/WebP files in the Image Finder, click **Review batch matches**, and correct any ambiguous assignments with the per-file Pop dropdown. For each image, click **Review selected image**, inspect the preview and exact edition, confirm reuse rights for that image, then click **Approve for batch**. Enter a GitHub fine-grained token and select **Upload approved images (skip existing)**. Confirm the final upload count.
 
 Uploads run sequentially and display counts of successful, skipped, and failed items. Existing images are skipped rather than overwritten. Failed approved items remain available for retry in the same page session. Keep the browser tab open until completion. This workflow uploads only files you selected and reviewed; it does not scrape Funko.com or grant image redistribution rights.
+
+Batch approvals are tracked per file, including the rights confirmation made during review. Reopening or reassigning a file clears its approval. A browser reload clears pending approvals; no GitHub token is stored.
