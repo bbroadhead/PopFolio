@@ -319,15 +319,32 @@ function officialProductUrl(value){
   return url.href;
  }catch{return null}
 }
+function officialProductMatch(pop,value){
+ const url=officialProductUrl(value);
+ if(!url)return {url:null,score:0,reason:'Invalid official product URL'};
+ const segment=decodeURIComponent(new URL(url).pathname.split('/')[1]||'');
+ const title=segment.replace(/-/g,' ').replace(/^pop /i,'').toLowerCase();
+ const words=x=>String(x||'').toLowerCase().match(/[a-z0-9]+/g)||[];
+ const name=words(pop.name).filter(x=>x.length>1);
+ const titleWords=new Set(words(title));
+ const matched=name.filter(x=>titleWords.has(x)).length;
+ const overlap=matched/Math.max(1,name.length);
+ const variants=variantMarkers.filter(x=>String(pop.variant||'').toLowerCase().includes(x));
+ const inUrl=variantMarkers.filter(x=>title.includes(x));
+ if(variants.some(x=>!inUrl.includes(x))||inUrl.some(x=>!variants.includes(x)))return {url,score:0,reason:'Possible edition mismatch; verify manually'};
+ if(overlap<0.5)return {url,score:0,reason:'Product URL name does not match collection entry'};
+ return {url,score:overlap,reason:'Name appears consistent; verify box number and variant on product page'};
+}
 function reviewOfficialProduct(){
  const p=selectedPop();
  if(!p)return setStatus('Select a Pop first.',true);
- const url=officialProductUrl($('finder-official-product')?.value);
- if(!url)return setStatus('Enter an HTTPS Funko.com product URL ending in /item-number.html.',true);
+ const match=officialProductMatch(p,$('finder-official-product')?.value);
+ if(!match.url)return setStatus('Enter an HTTPS Funko.com product URL ending in /item-number.html.',true);
  const link=$('finder-official-review');
- link.href=url;link.hidden=false;link.textContent='Open official product page for '+p.name+' ↗';
- setStatus('Official product page linked for manual verification. Product photos are not copied or imported automatically.');
+ link.href=match.url;link.hidden=false;link.textContent='Open official product page for '+p.name+' ↗';
+ setStatus(match.reason+'. This is an advisory filename check only; no image was downloaded.',match.score===0);
 }
+
 function searchLinks(p){
  const q=encodeURIComponent(['Funko Pop',p.name,p.number,p.variant].filter(Boolean).join(' '));
  $('finder-source-links').innerHTML='<a href="https://funko.com/search/?term='+q+'" target="_blank" rel="noopener">Search official Funko catalog ↗</a> <a href="https://funko.fandom.com/wiki/Special:Search?query='+q+'" target="_blank" rel="noopener">Search Funko Wiki ↗</a> <a href="https://www.popcultcha.com.au/catalogsearch/result/?q='+q+'" target="_blank" rel="noopener">Search Popcultcha ↗</a>';
