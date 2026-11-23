@@ -89,3 +89,29 @@ The Image Finder accepts a local JSON array of image candidates supplied by an a
 ```
 
 The optional `productUrl` must be an official Funko product-detail URL. It is validated and displayed for verification; a URL-name match is not proof that the product, box number, or variant is correct.\n\nEach ID must correspond to an existing collection entry. Records must have unique IDs, HTTPS image URLs, a source, and a permission description. The importer validates up to 1,000 records, then displays candidates for individual review. It does not automatically download or upload anything. A license description is user-supplied information, **not** proof of redistribution rights. The image provider must actually authorize reuse.
+
+### Retrieve official Funko product image candidates
+
+A Python standard-library tool now reads official Funko product pages and extracts product image URLs from JSON-LD Product metadata (with Open Graph fallback). It does not require an API key.
+
+Create `funko-products.json`:
+
+```json
+[
+  {"id": "Back to the Future:6", "productUrl": "https://funko.com/pop-example/12345.html"}
+]
+```
+
+Replace the example URL with a real official product page. Run:
+
+```sh
+python scripts/funko_retrieve.py --input funko-products.json --output funko-candidates.json
+```
+
+The output can be loaded in the Image Finder's authorized image manifest review UI. For local **opt-in** image downloads (only where permitted):
+
+```sh
+python scripts/funko_retrieve.py --input funko-products.json --output funko-candidates.json --download-dir funko-previews
+```
+
+The script checks robots.txt, limits requests to a minimum one-second delay, does not bypass bot challenges, and never automatically commits or uploads images. Retrieved images are not necessarily licensed for republication. The generated manifest marks permission **unverified**, and each image still needs rights verification and approval. Product pages may disappear or change their metadata, so retrieval can return no results.
