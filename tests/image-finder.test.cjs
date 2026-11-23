@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../image-finder.js'),'utf8');
 function evaluate(expression){
  const context={window:{},document:{addEventListener(){}},URL,Set,Image:function(){}};
- vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,csvCell,batchMatch,officialProductUrl,state};})();'),context);
+ vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,csvCell,batchMatch,officialProductUrl,officialProductMatch,state};})();'),context);
  return vm.runInNewContext(expression,context);
 }
 test('normalizes indexed image filenames regardless of extension and path',()=>{
@@ -66,4 +66,14 @@ test('rejects impersonator hosts and insecure official links',()=>{
 });
 test('rejects non-product official pages',()=>{
  assert.equal(evaluate("__test.officialProductUrl('https://funko.com/search/?term=superman')"),null);
+});
+
+test('official product matcher recognizes matching product slug',()=>{
+ assert.equal(evaluate("__test.officialProductMatch({name:'Superman',variant:''},'https://funko.com/pop-superman/85642.html').score"),1);
+});
+test('official product matcher warns on mismatched product',()=>{
+ assert.equal(evaluate("__test.officialProductMatch({name:'Batman',variant:''},'https://funko.com/pop-superman/85642.html').score"),0);
+});
+test('official product matcher warns on mismatched chase edition',()=>{
+ assert.equal(evaluate("__test.officialProductMatch({name:'Superman',variant:'Chase'},'https://funko.com/pop-superman/85642.html').score"),0);
 });
