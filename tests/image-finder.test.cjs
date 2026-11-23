@@ -10,8 +10,8 @@ function evaluate(expression){
  return vm.runInNewContext(expression,context);
 }
 test('normalizes indexed image filenames regardless of extension and path',()=>{
- assert.equal(evaluate("normalizeImageName('assets/pop_images/Geralt-1317.JPG')"),'geralt-1317');
- assert.equal(evaluate("normalizeImageName('Geralt-1317.png')"),'geralt-1317');
+ assert.equal(evaluate("__test.normalizeImageName('assets/pop_images/Geralt-1317.JPG')"),'geralt-1317');
+ assert.equal(evaluate("__test.normalizeImageName('Geralt-1317.png')"),'geralt-1317');
 });
 test('recognizes saved JPEG as existing image for matching Pop',()=>{
  assert.equal(evaluate("(__test.state.savedFiles.add('Geralt-1317.JPG'),__test.needsImage({name:'Geralt',number:'1317',variant:'',image:null}))"),false);
