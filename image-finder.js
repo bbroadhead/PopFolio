@@ -361,9 +361,11 @@ function parseAuthorizedManifest(text,pops){
   let parsed;
   try{parsed=new URL(url)}catch{throw Error('Invalid image URL for Pop '+id)}
   if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw Error('Image URL must use HTTPS for Pop '+id);
+  if(!['https:'].includes(parsed.protocol)||['localhost','127.0.0.1','0.0.0.0','::1'].includes(parsed.hostname.toLowerCase()))throw Error('Image host is not permitted for Pop '+id);
   const source=String(entry.source||'').trim();
   const license=String(entry.license||'').trim();
   if(!source||!license)throw Error('Source and image permission are required for Pop '+id);
+  if(source.length>160||license.length>240)throw Error('Source or permission text too long for Pop '+id);
   return {pop,url,source,license};
  });
 }
@@ -379,11 +381,12 @@ async function loadAuthorizedManifest(){
    const label=document.createElement('span');
    label.textContent=item.pop.name+' #'+(item.pop.number||'—')+' — '+item.source+' — '+item.license+(needsImage(item.pop)?'':' — EXISTING IMAGE');
    const button=document.createElement('button');button.type='button';button.textContent='Review image URL';
-   button.addEventListener('click',()=>{
+   button.addEventListener('click',async()=>{
     $('finder-pop').value=String(item.pop.id);selectPopChanged();
     $('finder-url').value=item.url;
     $('finder-source-credit').textContent='Manifest source: '+item.source+' · Permission: '+item.license;
-    setStatus('Verify this manifest image against the Pop and its permission terms, then click Preview URL.');
+    setStatus('Checking candidate preview. Verify the exact edition and image permission before saving.');
+    await preview(item.url,'Authorized manifest',item.source+' — '+item.pop.name);
    });
    row.append(label,button);root.append(row);
   }
