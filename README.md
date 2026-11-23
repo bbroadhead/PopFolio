@@ -55,3 +55,11 @@ The original spreadsheet is read-only. Manual browser sync updates the current s
 
 ### Verification
 Static validation confirms that app.js and sw.js parse as JavaScript, the PWA manifest and collection/wishlist snapshots are valid JSON, and 551 collection entries and 22 wishlist entries are available. Browser interactions and GitHub Pages deployment still require live smoke testing.
+
+## Image Finder review workflow
+
+Open **Individual Pop explorer → Find & save Pop images**. The finder can filter the collection to entries without images, advance through a review queue, and search Funko Wiki for candidate previews. It also provides a link to the official Funko catalog for manual research; **the Funko.com link is not an automated image API or scraper**.
+
+Before saving, verify the exact character, Pop number, exclusive/chase edition, and rights to store and republish the image. Paste a direct HTTPS image URL and preview it, or choose a PNG/JPEG/WebP file and wait for its preview. The finder uploads the reviewed image to `assets/pop_images/` using a fine-grained GitHub token entered in the browser; the token is not persisted by the application. Existing filenames require an explicit overwrite confirmation. The repository image-index workflow updates the persistent index after a successful commit.
+
+The review queue consults the Pop's image field and the existing image filename index, including non-PNG extensions. It is a convenience filter, not a definitive license or image-identity audit. Automatic Funko.com image discovery and unattended bulk imports are **not implemented**. Do not assume product images are licensed for redistribution merely because they appear on Funko.com.
