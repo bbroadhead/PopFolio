@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../image-finder.js'),'utf8');
 function evaluate(expression){
  const context={window:{},document:{addEventListener(){}},Set,Image:function(){}};
- vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,csvCell,state};})();'),context);
+ vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,csvCell,batchMatch,state};})();'),context);
  return vm.runInNewContext(expression,context);
 }
 test('normalizes indexed image filenames regardless of extension and path',()=>{
@@ -32,4 +32,17 @@ test('CSV quotes and commas are escaped',()=>{
 test('CSV cells cannot start spreadsheet formulas',()=>{
  assert.equal(evaluate("__test.csvCell('=HYPERLINK(\"https://example.com\")')"),'\x22\x27=HYPERLINK(\x22\x22https://example.com\x22\x22)\x22');
  assert.equal(evaluate("__test.csvCell('  +SUM(1,2)')"),'\x22\x27  +SUM(1,2)\x22');
+});
+
+test('batch matches exact image filename',()=>{
+ assert.equal(evaluate("__test.batchMatch({name:'Geralt-1317.png',type:'image/png',size:100},[{id:1,name:'Geralt',number:'1317',variant:''}]).pop.id"),1);
+});
+test('batch rejects invalid image type',()=>{
+ assert.equal(evaluate("__test.batchMatch({name:'Geralt-1317.svg',type:'image/svg+xml',size:100},[{id:1,name:'Geralt',number:'1317',variant:''}]).pop"),null);
+});
+test('batch rejects ambiguous figure numbers',()=>{
+ assert.equal(evaluate("__test.batchMatch({name:'Geralt-1317-1321.jpg',type:'image/jpeg',size:100},[{id:1,name:'Geralt',number:'1317',variant:''}]).pop"),null);
+});
+test('batch refuses missing chase marker for variant',()=>{
+ assert.equal(evaluate("__test.batchMatch({name:'Geralt-special-1317.jpg',type:'image/jpeg',size:100},[{id:1,name:'Geralt',number:'1317',variant:'Chase'}]).pop"),null);
 });
