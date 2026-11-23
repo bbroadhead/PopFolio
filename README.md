@@ -71,3 +71,20 @@ Select multiple PNG/JPEG/WebP files in the Image Finder, click **Review batch ma
 Uploads run sequentially and display counts of successful, skipped, and failed items. Existing images are skipped rather than overwritten. Failed approved items remain available for retry in the same page session. Keep the browser tab open until completion. This workflow uploads only files you selected and reviewed; it does not scrape Funko.com or grant image redistribution rights.
 
 Batch approvals are tracked per file, including the rights confirmation made during review. Reopening or reassigning a file clears its approval. A browser reload clears pending approvals; no GitHub token is stored.
+
+### Authorized image-source manifest
+
+The Image Finder accepts a local JSON array of image candidates supplied by an authorized provider. Example:
+
+```json
+[
+  {
+    "id": "YOUR_EXISTING_POP_ID",
+    "imageUrl": "https://licensed-provider.example/images/figure.png",
+    "source": "Licensed image provider",
+    "license": "Permission to store and republish confirmed"
+  }
+]
+```
+
+Each ID must correspond to an existing collection entry. Records must have unique IDs, HTTPS image URLs, a source, and a permission description. The importer validates up to 1,000 records, then displays candidates for individual review. It does not automatically download or upload anything. A license description is user-supplied information, **not** proof of redistribution rights. The image provider must actually authorize reuse.
