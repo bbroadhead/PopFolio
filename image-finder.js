@@ -11,7 +11,8 @@ function needsImage(p){
  if(p.image&&String(p.image).trim())return false;
  // Image indexing is asynchronous; do not re-queue an image already saved
  // under its deterministic local filename.
- return !state.savedFiles.has(filename(p));
+ const expected=filename(p).replace(/\\.png$/i,'').toLowerCase();
+ return ![...state.savedFiles].some(file=>String(file).replace(/\\.[^.]+$/,'').toLowerCase()===expected);
 }
 function queue(){return state.pops.filter(p=>!$('finder-missing-only')?.checked||needsImage(p))}
 function updateQueueCount(){const el=$('finder-queue-count');if(el)el.textContent=state.pops.filter(needsImage).length+' Pops without images · '+queue().length+' in review queue'}
