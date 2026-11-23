@@ -1,0 +1,59 @@
+name: Funko ten-entry discovery test
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: 'Zero-based collection offset'
+        required: false
+        default: '0'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run ten-entry discovery
+        shell: bash
+        env:
+          START: ${{ inputs.start }}
+        run: |
+          if ! [[ "$START" =~ ^[0-9]{1,6}$ ]]; then
+            echo "Invalid start offset"; exit 1
+          fi
+          python scripts/funko_retrieve.py --input data/pops.json --output funko-test-candidates.json --start "$START" --limit 10
+      - name: Report results
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          found = json.loads(pathlib.Path("funko-test-candidates.json").read_text()) if pathlib.Path("funko-test-candidates.json").exists() else []
+          review = json.loads(pathlib.Path("funko-test-candidates-review.json").read_text()) if pathlib.Path("funko-test-candidates-review.json").exists() else []
+          summary = pathlib.Path(__import__('os').environ['GITHUB_STEP_SUMMARY'])
+          with summary.open('a') as out:
+              out.write(f"## Funko ten-entry test\n\nCandidates: **{len(found)}**; review needed: **{len(review)}**.\n\n")
+              out.write("| Collection ID | Status | Product page |\n|---|---|---|\n")
+              for item in found:
+                  out.write(f"| {str(item.get('id','')).replace('|','/')} | Candidate | {item.get('productUrl','')} |\n")
+              for item in review:
+                  out.write(f"| {str(item.get('id','')).replace('|','/')} | {str(item.get('reason','')).replace('|','/')} | {item.get('productUrl','')} |\n")
+          PY
+      - name: Attach candidate and review reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: funko-ten-entry-results
+          path: |
+            funko-test-candidates.json
+            funko-test-candidates-review.json
+          if-no-files-found: warn
+          retention-days: 7
