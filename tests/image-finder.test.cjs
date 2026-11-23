@@ -126,3 +126,10 @@ test('Funko retrieval export button exists in Image Finder',()=>{
  const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
  assert.match(html,/id="finder-funko-export"/);
 });
+
+test('in-app ten-entry test controls exist',()=>{
+ const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+ for(const id of ['finder-funko-start','finder-funko-test','finder-funko-test-runs']){
+  assert.match(html,new RegExp('id="'+id+'"'));
+ }
+});
