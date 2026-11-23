@@ -117,3 +117,13 @@ python scripts/funko_retrieve.py --input funko-products.json --output funko-cand
 The script checks robots.txt, limits requests to a minimum one-second delay, does not bypass bot challenges, and never automatically commits or uploads images. Retrieved images are not necessarily licensed for republication. The generated manifest marks permission **unverified**, and each image still needs rights verification and approval. Product pages may disappear or change their metadata, so retrieval can return no results.
 
 **Collection queue integration:** In Image Finder, select **Review only Pops without images**, then click **Export Funko retrieval input (JSON)**. Fill the `productUrl` fields with verified official Funko product links. Entries without a valid URL are skipped by the Python retriever. Use the resulting `funko-candidates.json` in **Review manifest candidates**. This is a manual product-URL matching step, not automatic Funko catalog search.
+
+### Collection-wide Funko product discovery (no manual links)
+
+Run the retrieval script directly against the existing collection:
+
+```sh
+python scripts/funko_retrieve.py --input data/pops.json --output funko-candidates.json
+```
+
+It skips entries with an existing `image` value, searches Funko's public catalog by name/number/variant, and attempts to resolve a single plausible official product page before extracting image metadata. If zero or multiple plausible pages are found, it skips the entry rather than guessing. Review the resulting `funko-candidates.json` in Image Finder; no image is published automatically. The discovery parser depends on Funko's current public HTML, which may change or block automated access. **This is not yet validated against live Funko search results.** Large collections take time because requests are deliberately throttled. `--include-existing` overrides the existing-image filter.
