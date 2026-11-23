@@ -5,8 +5,8 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../image-finder.js'),'utf8');
 function evaluate(expression){
- const context={window:{},document:{addEventListener(){}},Set,Image:function(){}};
- vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,csvCell,batchMatch,state};})();'),context);
+ const context={window:{},document:{addEventListener(){}},URL,Set,Image:function(){}};
+ vm.runInNewContext(source.replace(/\}\)\(\);\s*$/,';globalThis.__test={filename,normalizeImageName,matchCandidate,needsImage,csvCell,batchMatch,officialProductUrl,state};})();'),context);
  return vm.runInNewContext(expression,context);
 }
 test('normalizes indexed image filenames regardless of extension and path',()=>{
@@ -55,4 +55,15 @@ test('batch rejects zero-byte images',()=>{
 });
 test('batch rejects images over 10 MB',()=>{
  assert.equal(evaluate("__test.batchMatch({name:'Geralt-1317.png',type:'image/png',size:10485761},[{id:1,name:'Geralt',number:'1317',variant:''}]).pop"),null);
+});
+
+test('accepts official Funko product detail URLs',()=>{
+ assert.equal(evaluate("__test.officialProductUrl('https://funko.com/pop-superman-2025/85642.html')"),'https://funko.com/pop-superman-2025/85642.html');
+});
+test('rejects impersonator hosts and insecure official links',()=>{
+ assert.equal(evaluate("__test.officialProductUrl('https://funko.com.evil.test/pop-superman-2025/85642.html')"),null);
+ assert.equal(evaluate("__test.officialProductUrl('http://funko.com/pop-superman-2025/85642.html')"),null);
+});
+test('rejects non-product official pages',()=>{
+ assert.equal(evaluate("__test.officialProductUrl('https://funko.com/search/?term=superman')"),null);
 });
