@@ -87,3 +87,10 @@ test('authorized manifest rejects duplicate Pop identifiers',()=>{
 test('authorized manifest rejects insecure image URLs',()=>{
  assert.equal(evaluate("(()=>{try{__test.parseAuthorizedManifest(JSON.stringify([{id:1,imageUrl:'http://example.com/a.png',source:'Provider',license:'Allowed'}]),[{id:1,name:'Pop'}]);return false}catch{return true}})()"),true);
 });
+
+test('manifest accepts an official Funko product reference',()=>{
+ assert.equal(evaluate("__test.parseAuthorizedManifest(JSON.stringify([{id:1,imageUrl:'https://example.com/pop.png',source:'Provider',license:'Allowed',productUrl:'https://funko.com/pop-superman/85642.html'}]),[{id:1,name:'Superman'}])[0].productMatch.score"),1);
+});
+test('manifest rejects unofficial product reference domains',()=>{
+ assert.equal(evaluate("(()=>{try{__test.parseAuthorizedManifest(JSON.stringify([{id:1,imageUrl:'https://example.com/pop.png',source:'Provider',license:'Allowed',productUrl:'https://funko.com.evil.test/pop-superman/85642.html'}]),[{id:1,name:'Superman'}]);return false}catch{return true}})()"),true);
+});
