@@ -242,7 +242,7 @@ def run(args):
         time.sleep(max(args.delay, 1.0))
     Path(args.output).write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
     review_path = Path(args.review_output) if args.review_output else Path(args.output).with_name(Path(args.output).stem + "-review.json")
-    review_path.write_text(json.dumps(review, indent=2) + "\\n", encoding="utf-8")
+    review_path.write_text(json.dumps(review, indent=2) + "\n", encoding="utf-8")
     print(f"Wrote {len(output)} candidates to {args.output}; {len(review)} entries need review in {review_path}")
 
 
