@@ -189,12 +189,13 @@ def run(args):
     records = json.loads(Path(args.input).read_text(encoding="utf-8"))
     if isinstance(records, dict):
         records = records.get("items", [])
-    if not isinstance(records, list) or len(records) > 1000:
-        raise ValueError("Input must be an array of at most 1,000 product records")
+    if not isinstance(records, list) or len(records) > 10000:
+        raise ValueError("Input must be an array of at most 10,000 product records")
     robots = RobotFileParser()
     robots.set_url("https://funko.com/robots.txt")
     robots.read()
     output = []
+    review = []
     seen = set()
     folder = Path(args.download_dir) if args.download_dir else None
     if folder:
@@ -212,12 +213,14 @@ def run(args):
             try:
                 matches = discover(item, robots)
                 if len(matches) != 1:
+                    review.append({"id": ident, "name": item.get("name"), "number": item.get("number"), "variant": item.get("variant"), "candidates": matches, "reason": "ambiguous" if matches else "no matching product"})
                     print(f"Needs review {ident}: {len(matches)} possible official pages")
                     time.sleep(max(args.delay, 1.0))
                     continue
                 url = matches[0]
                 time.sleep(max(args.delay, 1.0))
             except Exception as exc:
+                review.append({"id": ident, "reason": "discovery failed", "error": str(exc)[:250]})
                 print(f"Discovery failed {ident}: {exc}")
                 continue
         if not robots.can_fetch(AGENT, url):
@@ -238,7 +241,9 @@ def run(args):
             print(f"Failed {ident}: {exc}")
         time.sleep(max(args.delay, 1.0))
     Path(args.output).write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
-    print(f"Wrote {len(output)} candidates to {args.output}")
+    review_path = Path(args.review_output) if args.review_output else Path(args.output).with_name(Path(args.output).stem + "-review.json")
+    review_path.write_text(json.dumps(review, indent=2) + "\\n", encoding="utf-8")
+    print(f"Wrote {len(output)} candidates to {args.output}; {len(review)} entries need review in {review_path}")
 
 
 if __name__ == "__main__":
@@ -247,5 +252,6 @@ if __name__ == "__main__":
     parser.add_argument("--output", default="funko-candidates.json")
     parser.add_argument("--download-dir", help="Opt-in local image downloads; never committed automatically")
     parser.add_argument("--delay", type=float, default=2.0)
+    parser.add_argument("--review-output", help="JSON report for missing or ambiguous matches")
     parser.add_argument("--include-existing", action="store_true", help="Include collection entries that already have an image")
     run(parser.parse_args())
