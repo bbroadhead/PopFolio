@@ -44,6 +44,21 @@ function populate(){
  if(state.pops.some(p=>String(p.id)===current))select.value=current;
  updateQueueCount();filterOptions();
 }
+async function loadIndexedImages(){
+ try{
+  const response=await fetch('./assets/pop_images/index.json',{cache:'no-store'});
+  if(!response.ok)return;
+  const index=await response.json();
+  // The index format is maintained by the repository workflow; inspect
+  // both indexed filenames and item paths without assuming a single shape.
+  const entries=Array.isArray(index)?index:Array.isArray(index.files)?index.files:Array.isArray(index.items)?index.items:[];
+  for(const entry of entries){
+   const path=typeof entry==='string'?entry:entry?.file||entry?.path||entry?.filename;
+   if(path)state.savedFiles.add(String(path).split('/').pop());
+  }
+  updateQueueCount();filterOptions();
+ }catch(e){/* Offline and first-run installations can lack an index. */}
+}
 function setPops(pops){state.pops=Array.isArray(pops)?pops:[];populate()}
 function originalWikiUrls(url){
  if(!url||!url.includes('static.wikia.nocookie.net/'))return [url].filter(Boolean);
@@ -217,6 +232,7 @@ async function save(){
 }
 function init(){
  const root=$('image-finder');if(!root)return;
+ loadIndexedImages();
  $('finder-search').addEventListener('click',search);
  $('finder-pop').addEventListener('change',selectPopChanged);
  $('finder-next')?.addEventListener('click',nextMissing);
