@@ -94,3 +94,13 @@ test('manifest accepts an official Funko product reference',()=>{
 test('manifest rejects unofficial product reference domains',()=>{
  assert.equal(evaluate("(()=>{try{__test.parseAuthorizedManifest(JSON.stringify([{id:1,imageUrl:'https://example.com/pop.png',source:'Provider',license:'Allowed',productUrl:'https://funko.com.evil.test/pop-superman/85642.html'}]),[{id:1,name:'Superman'}]);return false}catch{return true}})()"),true);
 });
+
+test('manifest rejects local network hostname candidates',()=>{
+ assert.equal(evaluate("(()=>{try{__test.parseAuthorizedManifest(JSON.stringify([{id:1,imageUrl:'https://localhost/pop.png',source:'Provider',license:'Allowed'}]),[{id:1,name:'Pop'}]);return false}catch{return true}})()"),true);
+});
+test('manifest rejects local subdomains',()=>{
+ assert.equal(evaluate("(()=>{try{__test.parseAuthorizedManifest(JSON.stringify([{id:1,imageUrl:'https://images.localhost/pop.png',source:'Provider',license:'Allowed'}]),[{id:1,name:'Pop'}]);return false}catch{return true}})()"),true);
+});
+test('manifest normalizes whitespace around Pop IDs',()=>{
+ assert.equal(evaluate("__test.parseAuthorizedManifest(JSON.stringify([{id:' 1 ',imageUrl:'https://example.com/pop.png',source:'Provider',license:'Allowed'}]),[{id:1,name:'Pop'}])[0].pop.id"),1);
+});
